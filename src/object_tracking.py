@@ -5,6 +5,12 @@ import argparse
 import imutils
 import time
 import cv2
+import serial
+from time import sleep
+
+# open Arduino Serial
+ser1 = serial.Serial('COM3', 9600)
+sleep(2)
 
 # construct the argument parser and parse the arguments
 ap = argparse.ArgumentParser()
@@ -14,6 +20,13 @@ ap.add_argument("-t", "--tracker", type=str, default="csrt",
                 help="OpenCV object tracker type")
 args = vars(ap.parse_args())
 
+# define stuff for x-coordinate detection
+ovcenterx = 0
+smallx = 0
+largex = 0
+olddirection = 'N'
+newdirection = 'N'
+centerx = 0
 # extract the OpenCV version info
 (major, minor) = cv2.__version__.split(".")[:2]
 
@@ -48,7 +61,7 @@ initBB = None
 # if a video path was not supplied, grab the reference to the web cam
 if not args.get("video", False):
     print("[INFO] starting video stream...")
-    vs = VideoStream(src=0).start()
+    vs = VideoStream(src=1).start()
     time.sleep(1.0)
 
 # otherwise, grab a reference to the video file
@@ -73,6 +86,7 @@ while True:
     # frame dimensions
     frame = imutils.resize(frame, width=500)
     (H, W) = frame.shape[:2]
+    ovcenterx = W/2
 
     # check to see if we are currently tracking an object
     if initBB is not None:
@@ -82,6 +96,23 @@ while True:
         # check to see if the tracking was a success
         if success:
             (x, y, w, h) = [int(v) for v in box]
+            smallx = x
+            largex = x + w
+            centerx = (smallx + largex)/2
+            if ((centerx / W) * 100) > 60:
+                newdirection = 'L'
+            else:
+                if ((centerx / W) * 100) < 40:
+                    newdirection = 'R'
+                else:
+                    newdirection = 'S'
+
+            if olddirection != newdirection:
+                ser1.write(newdirection.encode())
+                olddirection = newdirection
+                print("Sent New Direction")
+                print(olddirection)
+
             cv2.rectangle(frame, (x, y), (x + w, y + h),
                           (0, 255, 0), 2)
 
