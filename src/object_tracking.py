@@ -69,7 +69,7 @@ initBB = None
 # if a video path was not supplied, grab the reference to the web cam
 if not args.get("video", False):
     print("[INFO] starting video stream...")
-    vs = VideoStream(src=0).start()
+    vs = VideoStream(src=1).start()
     time.sleep(1.0)
 
 # otherwise, grab a reference to the video file
@@ -118,7 +118,7 @@ while True:
                 if ((centerx / W) * 100) < 40:
                     newxdirection = 'R'
                 else:
-                    newxdirection = 'S'
+                    newxdirection = 'X'
 
             if oldxdirection != newxdirection:
                 ser1.write(newxdirection.encode())
@@ -133,13 +133,20 @@ while True:
                 if ((centery / H) * 100) < 40:
                     newydirection = 'U'
                 else:
-                    newydirection = 'S'
+                    newydirection = 'Y'
 
             if oldydirection != newydirection:
                 ser1.write(newydirection.encode())
                 oldydirection = newydirection
                 print("Sent New Y Direction")
                 print(oldydirection)
+
+            # stop motors if both off
+            # if oldydirection == 'Y' and oldxdirection == 'X':
+            #     print("Stopping since in Center")
+            #     newydirection = 'S'
+            #     newxdirection = 'S'
+            #     ser1.write(newxdirection.encode())
 
             cv2.rectangle(frame, (x, y), (x + w, y + h),
                           (0, 255, 0), 2)
@@ -181,9 +188,11 @@ while True:
 
     # if the `q` key was pressed, break from the loop
     elif key == ord("q"):
+        ser1.write('S'.encode())
         break
 
 # if we are using a webcam, release the pointer
+ser1.write('S'.encode())
 if not args.get("video", False):
     vs.stop()
 
