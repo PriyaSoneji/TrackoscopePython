@@ -24,9 +24,17 @@ args = vars(ap.parse_args())
 ovcenterx = 0
 smallx = 0
 largex = 0
-olddirection = 'N'
-newdirection = 'N'
+oldxdirection = 'N'
+newxdirection = 'N'
 centerx = 0
+
+# define stuff for y-coordinate detection
+ovcentery = 0
+smally = 0
+largey = 0
+oldydirection = 'N'
+newydirection = 'N'
+centery = 0
 # extract the OpenCV version info
 (major, minor) = cv2.__version__.split(".")[:2]
 
@@ -61,7 +69,7 @@ initBB = None
 # if a video path was not supplied, grab the reference to the web cam
 if not args.get("video", False):
     print("[INFO] starting video stream...")
-    vs = VideoStream(src=1).start()
+    vs = VideoStream(src=0).start()
     time.sleep(1.0)
 
 # otherwise, grab a reference to the video file
@@ -99,19 +107,39 @@ while True:
             smallx = x
             largex = x + w
             centerx = (smallx + largex)/2
+            smally = y
+            largey = y + h
+            centery = (smally + largey)/2
+
+            # Send X direction
             if ((centerx / W) * 100) > 60:
-                newdirection = 'L'
+                newxdirection = 'L'
             else:
                 if ((centerx / W) * 100) < 40:
-                    newdirection = 'R'
+                    newxdirection = 'R'
                 else:
-                    newdirection = 'S'
+                    newxdirection = 'S'
 
-            if olddirection != newdirection:
-                ser1.write(newdirection.encode())
-                olddirection = newdirection
-                print("Sent New Direction")
-                print(olddirection)
+            if oldxdirection != newxdirection:
+                ser1.write(newxdirection.encode())
+                oldxdirection = newxdirection
+                print("Sent New X Direction")
+                print(oldxdirection)
+
+            # Send Y direction
+            if ((centery / H) * 100) > 60:
+                newydirection = 'D'
+            else:
+                if ((centery / H) * 100) < 40:
+                    newydirection = 'U'
+                else:
+                    newydirection = 'S'
+
+            if oldydirection != newydirection:
+                ser1.write(newydirection.encode())
+                oldydirection = newydirection
+                print("Sent New Y Direction")
+                print(oldydirection)
 
             cv2.rectangle(frame, (x, y), (x + w, y + h),
                           (0, 255, 0), 2)
