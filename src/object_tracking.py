@@ -35,6 +35,27 @@ largey = 0
 oldydirection = 'N'
 newydirection = 'N'
 centery = 0
+
+# flipping variables
+horizder = bool(False)
+vertder = bool(False)
+rotate = bool(False)
+sendrepeat = bool(False)
+centered = bool(False)
+
+xrangeh = 65
+xrangel = 35
+yrangeh = 65
+yrangel = 35
+
+
+def sendCommand(cmd):
+    ser1.write(cmd)
+    s = ser1.readline();
+    if not centered:
+        ser1.write(cmd)
+    # print("arduino sent back -> " + s.decode())
+
 # extract the OpenCV version info
 (major, minor) = cv2.__version__.split(".")[:2]
 
@@ -78,7 +99,7 @@ else:
 
 # initialize the FPS throughput estimator
 fps = None
-
+print(xrangel, xrangeh, yrangel, yrangeh)
 # loop over frames from the video stream
 while True:
     # grab the current frame, then handle if we are using a
@@ -92,7 +113,7 @@ while True:
 
     # resize the frame (so we can process it faster) and grab the
     # frame dimensions
-    frame = imutils.resize(frame, width=500)
+    frame = imutils.resize(frame, width=800)
     (H, W) = frame.shape[:2]
     ovcenterx = W/2
 
@@ -112,41 +133,53 @@ while True:
             centery = (smally + largey)/2
 
             # Send X direction
-            if ((centerx / W) * 100) > 60:
-                newxdirection = 'L'
-            else:
-                if ((centerx / W) * 100) < 40:
+            if ((centerx / W) * 100) > xrangeh:
+                # print("out of bound - xh")
+                if horizder:
+                    newxdirection = 'L'
+                else:
+                    newxdirection = 'R'
+            elif ((centerx / W) * 100) < xrangel:
+                # print("out of bound - xl")
+                if horizder:
                     newxdirection = 'R'
                 else:
-                    newxdirection = 'X'
+                    newxdirection = 'L'
+            else:
+                newxdirection = 'X'
 
-            if oldxdirection != newxdirection:
-                ser1.write(newxdirection.encode())
+            if (oldxdirection != newxdirection) or sendrepeat:
+                sendCommand(newxdirection.encode())
                 oldxdirection = newxdirection
-                print("Sent New X Direction")
-                print(oldxdirection)
+                # print("Sent New X Direction")
+                # print(oldxdirection)
 
             # Send Y direction
-            if ((centery / H) * 100) > 60:
-                newydirection = 'D'
-            else:
-                if ((centery / H) * 100) < 40:
+            if ((centery / H) * 100) > yrangeh:
+                # print("out of bound - yh")
+                if vertder:
+                    newydirection = 'D'
+                else:
+                    newydirection = 'U'
+            elif ((centery / H) * 100) < yrangel:
+                # print("out of bound - yl")
+                if vertder:
                     newydirection = 'U'
                 else:
-                    newydirection = 'Y'
+                    newydirection = 'D'
+            else:
+                newydirection = 'Y'
 
-            if oldydirection != newydirection:
-                ser1.write(newydirection.encode())
+            if (oldydirection != newydirection) or sendrepeat:
+                sendCommand(newydirection.encode())
                 oldydirection = newydirection
-                print("Sent New Y Direction")
-                print(oldydirection)
+                # print("Sent New Y Direction")
+                # print(oldydirection)
 
-            # stop motors if both off
-            # if oldydirection == 'Y' and oldxdirection == 'X':
-            #     print("Stopping since in Center")
-            #     newydirection = 'S'
-            #     newxdirection = 'S'
-            #     ser1.write(newxdirection.encode())
+            if (newydirection == 'Y') and (newxdirection == 'X'):
+                centered = True
+            else:
+                centered = False
 
             cv2.rectangle(frame, (x, y), (x + w, y + h),
                           (0, 255, 0), 2)
@@ -158,9 +191,9 @@ while True:
         # initialize the set of information we'll be displaying on
         # the frame
         info = [
-            ("Tracker", args["tracker"]),
             ("Success", "Yes" if success else "No"),
             ("FPS", "{:.2f}".format(fps.fps())),
+            ("In Center", "Yes" if centered else "No"),
         ]
 
         # loop over the info tuples and draw them on our frame
@@ -172,6 +205,32 @@ while True:
     # show the output frame
     cv2.imshow("Frame", frame)
     key = cv2.waitKey(1) & 0xFF
+
+    # print(key)
+
+    # stop if space bar
+    if key == ord("5"):
+        sendCommand('S'.encode())
+    if key == ord("8"):
+        if vertder:
+            sendCommand('U'.encode())
+        else:
+            sendCommand('D'.encode())
+    if key == ord("2"):
+        if vertder:
+            sendCommand('D'.encode())
+        else:
+            sendCommand('U'.encode())
+    if key == ord("4"):
+        if vertder:
+            sendCommand('L'.encode())
+        else:
+            sendCommand('R'.encode())
+    if key == ord("6"):
+        if vertder:
+            sendCommand('R'.encode())
+        else:
+            sendCommand('L'.encode())
 
     # if the 's' key is selected, we are going to "select" a bounding
     # box to track
@@ -186,13 +245,22 @@ while True:
         tracker.init(frame, initBB)
         fps = FPS().start()
 
+    # if the 'h' key was pressed, the horizontal direction is flipped
+    if key == ord("h"):
+        horizder = not horizder
+        print("flipped horizontal")
+
+    if key == ord("v"):
+        vertder = not vertder
+        print("flipped vertical")
+
     # if the `q` key was pressed, break from the loop
     elif key == ord("q"):
-        ser1.write('S'.encode())
+        sendCommand('S'.encode())
         break
 
 # if we are using a webcam, release the pointer
-ser1.write('S'.encode())
+sendCommand('S'.encode())
 if not args.get("video", False):
     vs.stop()
 
