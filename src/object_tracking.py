@@ -16,6 +16,7 @@ smallx = 0
 largex = 0
 oldxdirection = 'N'
 newxdirection = 'N'
+xdirection = 'N'
 centerx = 0
 
 # define stuff for y-coordinate detection
@@ -24,6 +25,7 @@ smally = 0
 largey = 0
 oldydirection = 'N'
 newydirection = 'N'
+ydirection = 'N'
 centery = 0
 
 # flipping variables
@@ -33,12 +35,17 @@ vertder = bool(False)
 rotate = bool(False)
 sendrepeat = bool(False)
 centered = bool(False)
+cameramode = bool(True)
 
 # range limits
-xrangeh = 65
-xrangel = 35
-yrangeh = 65
-yrangel = 35
+xrangehl = 55
+xrangell = 45
+yrangehl = 55
+yrangell = 45
+xrangehs = 65
+xrangels = 35
+yrangehs = 65
+yrangels = 35
 availvid = []
 
 # check for available serial ports
@@ -67,7 +74,7 @@ def serial_ports():
 # open Arduino Serial
 availableport = serial_ports()
 if len(availableport) > 0:
-    ser1 = serial.Serial(availableport[0], 9600)
+    ser1 = serial.Serial(availableport[0], 115200)
     sleep(2)
     portopen = True
 
@@ -83,10 +90,8 @@ args = vars(ap.parse_args())
 def sendCommand(cmd):
     if portopen:
         ser1.write(cmd)
-        s = ser1.readline();
         if not centered:
             ser1.write(cmd)
-        # print("arduino sent back -> " + s.decode())
 
 # extract the OpenCV version info
 (major, minor) = cv2.__version__.split(".")[:2]
@@ -113,6 +118,7 @@ initBB = None
 
 # Checks for a valid camera
 def testDevice(source):
+   print("Trying video source" , source)
    cap = cv2.VideoCapture(source)
    if cap is None or not cap.isOpened():
        return False
@@ -138,46 +144,84 @@ fps = None
 
 # defines how to make a move depending on location of bounding box center
 def makemove():
-    global smallx, largex, centerx, smally, largey, centery, newxdirection, oldxdirection, newydirection, oldydirection
+    global smallx, largex, centerx, smally, largey, centery, newxdirection, oldxdirection, newydirection, oldydirection, ydirection, xdirection
     smallx = x
     largex = x + w
     centerx = (smallx + largex) / 2
     smally = y
     largey = y + h
     centery = (smally + largey) / 2
-    # Send X direction
-    if ((centerx / W) * 100) > xrangeh:
-        if horizder:
-            newxdirection = 'L'
+
+    # large movements
+    if cameramode:
+        # Send X direction
+        if ((centerx / W) * 100) > xrangehl:
+            if horizder:
+                newxdirection = 'L'
+            else:
+                newxdirection = 'R'
+        elif ((centerx / W) * 100) < xrangell:
+            if horizder:
+                newxdirection = 'R'
+            else:
+                newxdirection = 'L'
         else:
-            newxdirection = 'R'
-    elif ((centerx / W) * 100) < xrangel:
-        if horizder:
-            newxdirection = 'R'
+            newxdirection = 'X'
+        if (oldxdirection != newxdirection) or sendrepeat:
+            sendCommand(newxdirection.encode())
+            oldxdirection = newxdirection
+        # Send Y direction
+        if ((centery / H) * 100) > yrangehl:
+            if vertder:
+                newydirection = 'D'
+            else:
+                newydirection = 'U'
+        elif ((centery / H) * 100) < yrangell:
+            if vertder:
+                newydirection = 'U'
+            else:
+                newydirection = 'D'
         else:
-            newxdirection = 'L'
-    else:
-        newxdirection = 'X'
-    if (oldxdirection != newxdirection) or sendrepeat:
-        sendCommand(newxdirection.encode())
-        oldxdirection = newxdirection
-    # Send Y direction
-    if ((centery / H) * 100) > yrangeh:
-        if vertder:
-            newydirection = 'D'
+            newydirection = 'Y'
+        if (oldydirection != newydirection) or sendrepeat:
+            sendCommand(newydirection.encode())
+            oldydirection = newydirection
+
+    # small movements
+    if not cameramode:
+        # Send X direction
+        if ((centerx / W) * 100) > xrangehs:
+            if horizder:
+                xdirection = 'l'
+            else:
+                xdirection = 'r'
+        elif ((centerx / W) * 100) < xrangels:
+            if horizder:
+                xdirection = 'r'
+            else:
+                xdirection = 'l'
         else:
-            newydirection = 'U'
-    elif ((centery / H) * 100) < yrangel:
-        if vertder:
-            newydirection = 'U'
+            xdirection = 'x'
+        if (xdirection != 'x') or sendrepeat:
+            sendCommand(xdirection.encode())
+        # Send Y direction
+        if ((centery / H) * 100) > yrangehs:
+            if vertder:
+                ydirection = 'd'
+            else:
+                ydirection = 'u'
+        elif ((centery / H) * 100) < yrangels:
+            if vertder:
+                ydirection = 'u'
+            else:
+                ydirection = 'd'
         else:
-            newydirection = 'D'
-    else:
-        newydirection = 'Y'
-    if (oldydirection != newydirection) or sendrepeat:
-        sendCommand(newydirection.encode())
-        oldydirection = newydirection
-    if (newydirection == 'Y') and (newxdirection == 'X'):
+            ydirection = 'y'
+
+        if (ydirection != 'y') or sendrepeat:
+            sendCommand(ydirection.encode())
+
+    if ((newydirection == 'Y') and (newxdirection == 'X')) or ((ydirection == 'y') and (xdirection == 'x')):
         centered = True
     else:
         centered = False
@@ -185,33 +229,35 @@ def makemove():
 
 # allows for the manual control of the platform
 def manualmove():
-    # stop if space bar
     if key == ord("5"):
+        print("manual stop")
         sendCommand('S'.encode())
+        print("sent")
+        # sendCommand('s'.encode())
     if key == ord("8"):
         print("Up/Down")
         if vertder:
-            sendCommand('U'.encode())
+            sendCommand('u'.encode())
         else:
-            sendCommand('D'.encode())
+            sendCommand('d'.encode())
     if key == ord("2"):
         print("Up/Down")
         if vertder:
-            sendCommand('D'.encode())
+            sendCommand('d'.encode())
         else:
-            sendCommand('U'.encode())
+            sendCommand('u'.encode())
     if key == ord("4"):
         print("Left/Right")
-        if vertder:
-            sendCommand('L'.encode())
+        if horizder:
+            sendCommand('r'.encode())
         else:
-            sendCommand('R'.encode())
+            sendCommand('l'.encode())
     if key == ord("6"):
         print("Left/Right")
-        if vertder:
-            sendCommand('qR'.encode())
+        if horizder:
+            sendCommand('l'.encode())
         else:
-            sendCommand('L'.encode())
+            sendCommand('r'.encode())
 
 
 # loop over frames from the video stream
@@ -268,6 +314,10 @@ while True:
     if key == ord("v"):
         vertder = not vertder
         print("flipped vertical")
+
+    if key == ord("m"):
+       cameramode = not cameramode
+       print("mode has been changed")
 
     # if the `q` key was pressed, break from the loop
     elif key == ord("q"):
