@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import numpy as np
 
-# define stuff for x-coordinate detectionx
+# define stuff for x-coordinate detection
 ovcenterx = 0
 smallx = 0
 largex = 0
@@ -53,11 +53,23 @@ yrangehs = 65
 yrangels = 35
 availvid = []
 
-# data for the plot
-data1 = {'X-Movement': ['US', 'CA', 'GER', 'UK', 'FR'],
-         'Y-Movement': [45000, 42000, 52000, 49000, 47000]
-         }
-df1 = DataFrame(data1, columns=['X-Movement', 'Y-Movement'])
+# graphing stuff
+currx = 0
+curry = 0
+
+# graphing trajectory
+# plt.style.use('fivethirtyeight')
+
+x_values = []
+y_values = []
+
+x_values.append(0)
+y_values.append(0)
+
+
+def addpoint():
+    x_values.append(currx)
+    y_values.append(curry)
 
 # initialize the window toolkit along with the two image panels
 root = Tk()
@@ -141,14 +153,14 @@ def sendCommand(cmd):
 
 
 def videoLoop():
-    global vs, panelB, frame
+    global vs, panelB, frame, initBB
     try:
         # keep looping over frames until we are instructed to stop
         while not stopEvent.is_set():
             # grab the frame from the video stream and resize it to
             # have a maximum width of 300 pixels
             frame = vs.read()
-            frame = imutils.resize(frame, width=800)
+            frame = imutils.resize(frame, width=600)
             (H, W) = frame.shape[:2]
 
             # check to see if we are currently tracking an object
@@ -164,6 +176,7 @@ def videoLoop():
                 info = [
                     ("Tracking Success", "Yes" if success else "No")
                 ]
+
                 for (i, (k, v)) in enumerate(info):
                     text = "{}: {}".format(k, v)
                     cv2.putText(frame, text, (10, H - ((i * 20) + 20)),
@@ -191,16 +204,19 @@ def videoLoop():
 
 def plotgraph():
     # grab a reference to the image panels
-    global panelA, df1
+    global panelA
+
+    # data for the plot
+    df1 = DataFrame({'X-Movement': x_values,
+                     'Y-Movement': y_values})
 
     # figure one data
     figure1 = plt.Figure(figsize=(6, 5), dpi=100)
-    ax1 = figure1.add_subplot(111)
+    ax = figure1.add_subplot(111)
     bar1 = FigureCanvasTkAgg(figure1, root)
     bar1.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH)
-    df1 = df1[['X-Movement', 'Y-Movement']].groupby('X-Movement').sum()
-    df1.plot(kind='bar', legend=True, ax=ax1)
-    ax1.set_title('Organism Trajectory')
+    df1.plot(kind='scatter', legend=False, ax=ax, grid=True, x='X-Movement', y='Y-Movement')
+    df1.plot(kind='line', legend=False, ax=ax, grid=True, x='X-Movement', y='Y-Movement')
 
 
 # Checks for a valid camera
@@ -214,9 +230,11 @@ def testDevice(source):
 
 
 def startTracking():
+    global frame, initBB, tracker
     # if the 's' key is selected start tracking
     initBB = cv2.selectROI("Frame", frame, fromCenter=False,
                            showCrosshair=True)
+    print(initBB)
     # start OpenCV object tracker using the supplied bounding box
     tracker.init(frame, initBB)
 
