@@ -5,12 +5,20 @@ import argparse
 import imutils
 import time
 import cv2
+from itertools import count
+import matplotlib
 import matplotlib.pyplot as plt
-import numpy as np
+from matplotlib.animation import FuncAnimation
 import sys
 import glob
 import serial
 from time import sleep
+plt.ioff()
+
+
+
+
+
 
 # define stuff for x-coordinate detection
 ovcenterx = 0
@@ -50,6 +58,9 @@ yrangehs = 65
 yrangels = 35
 availvid = []
 
+# graphing stuff
+currx = 0
+curry = 0
 
 # check for available serial ports
 def serial_ports():
@@ -149,6 +160,30 @@ else:
 # initialize the FPS throughput estimator
 fps = None
 
+#graphing trajectory
+plt.style.use('fivethirtyeight')
+
+x_values = []
+y_values = []
+
+x_values.append(0)
+y_values.append(0)
+
+plt.title('Protist Trajectory')
+plt.xlabel('X-Pos')
+plt.ylabel('Y-Pos')
+
+def addpoint():
+    x_values.append(currx)
+    y_values.append(curry)
+    print(currx)
+    print(curry)
+
+def update():
+    plt.plot(x_values, y_values)
+    plt.pause(0.001)
+
+plt.tight_layout()
 
 # defines how to make a move depending on location of bounding box center
 def makemove():
@@ -201,13 +236,17 @@ def makemove():
         if ((centerx / W) * 100) > xrangehs:
             if horizder:
                 xdirection = 'l'
+
             else:
                 xdirection = 'r'
+
         elif ((centerx / W) * 100) < xrangels:
             if horizder:
                 xdirection = 'r'
+
             else:
                 xdirection = 'l'
+
         else:
             xdirection = 'x'
         if (xdirection != 'x') or sendrepeat:
@@ -216,13 +255,17 @@ def makemove():
         if ((centery / H) * 100) > yrangehs:
             if vertder:
                 ydirection = 'd'
+
             else:
                 ydirection = 'u'
+
         elif ((centery / H) * 100) < yrangels:
             if vertder:
                 ydirection = 'u'
+
             else:
                 ydirection = 'd'
+
         else:
             ydirection = 'y'
 
@@ -238,64 +281,49 @@ def makemove():
 
 # allows for the manual control of the platform
 def manualmove():
+    global currx, curry
     if key == ord("5"):
-        print("manual stop")
         sendCommand('S'.encode())
-        print("sent")
-        # sendCommand('s'.encode())
     if key == ord("8"):
         print("Up/Down")
         if vertder:
             sendCommand('u'.encode())
+            curry = curry - 1
+            addpoint()
         else:
             sendCommand('d'.encode())
+            curry = curry + 1
+            addpoint()
     if key == ord("2"):
         print("Up/Down")
         if vertder:
             sendCommand('d'.encode())
+            curry = curry + 1
+            addpoint()
         else:
             sendCommand('u'.encode())
+            curry = curry - 1
+            addpoint()
     if key == ord("4"):
         print("Left/Right")
         if horizder:
             sendCommand('r'.encode())
+            currx = currx - 1
+            addpoint()
         else:
             sendCommand('l'.encode())
+            currx = currx + 1
+            addpoint()
     if key == ord("6"):
         print("Left/Right")
         if horizder:
             sendCommand('l'.encode())
+            currx = currx + 1
+            addpoint()
         else:
             sendCommand('r'.encode())
-
-# make graph
-# use ggplot style for more sophisticated visuals
-plt.style.use('ggplot')
-
-
-def live_plotter(x_vec, y1_data, line1, identifier='', pause_time=0.1):
-    if line1 == []:
-        # this is the call to matplotlib that allows dynamic plotting
-        plt.ion()
-        fig = plt.figure(figsize=(13, 6))
-        ax = fig.add_subplot(111)
-        # create a variable for the line so we can later update it
-        line1, = ax.plot(x_vec, y1_data, '-o', alpha=0.8)
-        # update plot label/title
-        plt.ylabel('Y Label')
-        plt.title('Title: {}'.format(identifier))
-        plt.show()
-
-    # after the figure, axis, and line are created, we only need to update the y-data
-    line1.set_ydata(y1_data)
-    # adjust limits if new data goes beyond bounds
-    if np.min(y1_data) <= line1.axes.get_ylim()[0] or np.max(y1_data) >= line1.axes.get_ylim()[1]:
-        plt.ylim([np.min(y1_data) - np.std(y1_data), np.max(y1_data) + np.std(y1_data)])
-    # this pauses the data so the figure/axis can catch up - the amount of pause can be altered above
-    plt.pause(pause_time)
-
-    # return line so we can update it again in the next iteration
-    return line1
+            currx = currx - 1
+            addpoint()
 
 # loop over frames from the video stream
 while True:
@@ -331,8 +359,8 @@ while True:
             cv2.putText(frame, text, (10, H - ((i * 20) + 20)),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
     # show the output frame
-    cv2.imshow("Frame", frame)
     key = cv2.waitKey(1) & 0xFF
+    cv2.imshow("Frame", frame)
     manualmove()
 
     # if the 's' key is selected start tracking
@@ -342,6 +370,10 @@ while True:
         # start OpenCV object tracker using the supplied bounding box
         tracker.init(frame, initBB)
         fps = FPS().start()
+
+    if key == ord("p"):
+        plt.draw()
+        plt.show()
 
     # if the 'h' key was pressed, the horizontal direction is flipped
     if key == ord("h"):
@@ -361,6 +393,7 @@ while True:
         sendCommand('S'.encode())
         break
 
+    update()
 # if we are using a webcam, release the pointer
 sendCommand('S'.encode())
 if not args.get("video", False):
