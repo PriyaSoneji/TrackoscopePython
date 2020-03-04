@@ -10,7 +10,7 @@ import glob
 import serial
 from time import sleep
 
-# define stuff for x-coordinate detection
+# define stuff for x-coordinate detectionx
 ovcenterx = 0
 smallx = 0
 largex = 0
@@ -48,6 +48,7 @@ yrangehs = 65
 yrangels = 35
 availvid = []
 
+
 # check for available serial ports
 def serial_ports():
     # List serial ports
@@ -71,6 +72,7 @@ def serial_ports():
             pass
     return result
 
+
 # open Arduino Serial
 availableport = serial_ports()
 if len(availableport) > 0:
@@ -86,12 +88,14 @@ ap.add_argument("-t", "--tracker", type=str, default="csrt",
                 help="OpenCV object tracker type")
 args = vars(ap.parse_args())
 
+
 # sends command to the Arduino over serial port
 def sendCommand(cmd):
     if portopen:
         ser1.write(cmd)
         if not centered:
             ser1.write(cmd)
+
 
 # extract the OpenCV version info
 (major, minor) = cv2.__version__.split(".")[:2]
@@ -116,14 +120,15 @@ else:
 # initialize the bounding box coordinates
 initBB = None
 
+
 # Checks for a valid camera
 def testDevice(source):
-   print("Trying video source" , source)
-   cap = cv2.VideoCapture(source)
-   if cap is None or not cap.isOpened():
-       return False
-   else:
-       return True
+    print("Trying video source", source)
+    cap = cv2.VideoCapture(source)
+    if cap is None or not cap.isOpened():
+        return False
+    else:
+        return True
 
 
 # if a video path was not supplied, grab the reference to the web cam
@@ -132,7 +137,7 @@ if not args.get("video", False):
     for x in range(3):
         if testDevice(x):
             availvid.append(x)
-    vs = VideoStream(src=(availvid[len(availvid)-1])).start()
+    vs = VideoStream(src=(availvid[len(availvid) - 1])).start()
     time.sleep(1.0)
 
 # otherwise, grab a reference to the video file
@@ -141,6 +146,7 @@ else:
 
 # initialize the FPS throughput estimator
 fps = None
+
 
 # defines how to make a move depending on location of bounding box center
 def makemove():
@@ -227,6 +233,7 @@ def makemove():
         centered = False
     return centered
 
+
 # allows for the manual control of the platform
 def manualmove():
     if key == ord("5"):
@@ -268,7 +275,7 @@ while True:
         break
     frame = imutils.resize(frame, width=800)
     (H, W) = frame.shape[:2]
-    ovcenterx = W/2
+    ovcenterx = W / 2
     # check to see if we are currently tracking an object
     if initBB is not None:
         # grab the new bounding box coordinates of the object
@@ -316,8 +323,8 @@ while True:
         print("flipped vertical")
 
     if key == ord("m"):
-       cameramode = not cameramode
-       print("mode has been changed")
+        cameramode = not cameramode
+        print("mode has been changed")
 
     # if the `q` key was pressed, break from the loop
     elif key == ord("q"):
