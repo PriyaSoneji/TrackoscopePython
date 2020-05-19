@@ -6,6 +6,7 @@ import imutils
 import threading
 import argparse
 import cv2
+import time
 from time import sleep
 import serial
 import glob
@@ -56,17 +57,17 @@ xrangehl = 55
 xrangell = 45
 yrangehl = 55
 yrangell = 45
-xrangehs = 65
-xrangels = 35
-yrangehs = 65
-yrangels = 35
+xrangehs = 60
+xrangels = 40
+yrangehs = 60
+yrangels = 40
 availvid = []
 
 # graphing stuff
 currx = 0
 curry = 0
 count = 0
-countmax = 5
+countmax = 10
 
 x_values = []
 y_values = []
@@ -91,14 +92,22 @@ def swapMode():
     cameramode = not cameramode
 
 
-def quit():
+def quitTracking():
+    global initBB
     cv2.destroyAllWindows()
     sendCommand('S'.encode())
     vs.stop()
+    initBB = None
 
 
 def savePlot():
     figure1.savefig('output.png')
+
+
+def home():
+    if cameramode:
+        if currx > 0 and currx > 70:
+            print("moving back")
 
 
 # initialize the window toolkit along with the two image panels
@@ -189,10 +198,8 @@ initBB = None
 def sendCommand(cmd):
     if portopen:
         ser1.write(cmd)
-        sleep(0.5)
-        if not centered:
-            ser1.write(cmd)
-            sleep(0.5)
+        # if not centered:
+        #     ser1.write(cmd)
 
 
 def videoLoop():
@@ -218,8 +225,8 @@ def videoLoop():
                 # initialize info on screen
                 info = [
                     ("Tracking Success", "Yes" if success else "No"),
-                    ("X-Move", xdirection),
-                    ("Y-Move", ydirection),
+                    ("X-Move", oldxdirection),
+                    ("Y-Move", oldydirection),
                     ("In Center", "Yes" if centered else "No"),
                 ]
 
@@ -473,8 +480,9 @@ plotButton = Button(root, text="Plot Graph", command=plotgraph, activebackground
 hFlipButton = Button(root, text="Flip Horizontal Direction", command=swapHorizontal, activebackground='yellow')
 vFlipButton = Button(root, text="Flip Vertical Direction", command=swapVertical, activebackground='yellow')
 modeButton = Button(root, text="Change Operating Mode", command=swapMode, activebackground='yellow')
-stopButton = Button(root, text="Quit the Program", command=quit, activebackground='yellow')
+stopButton = Button(root, text="Quit the Program", command=quitTracking, activebackground='yellow')
 saveButton = Button(root, text="Save Image of Plot", command=savePlot, activebackground='yellow')
+homeButton = Button(root, text="Auto-Home", command=home, activebackground='yellow')
 
 root.bind('<KeyRelease>', up)
 
@@ -497,6 +505,7 @@ vFlipButton.grid(row=2, column=1, sticky='WENS')
 modeButton.grid(row=3, column=0, sticky='WENS')
 stopButton.grid(row=3, column=1, sticky='WENS')
 saveButton.grid(row=4, column=0, sticky='WENS')
+homeButton.grid(row=4, column=1, sticky='WENS')
 thread = threading.Thread(target=videoLoop, args=())
 thread.start()
 plotgraph()
