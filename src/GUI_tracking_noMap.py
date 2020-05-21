@@ -67,6 +67,7 @@ availvid = []
 currx = 0
 curry = 0
 count = 0
+steptodistance = 1
 countmax = 10
 
 x_values = []
@@ -124,9 +125,8 @@ stopEvent = threading.Event()
 def addpoint():
     global count, countmax, figure1
     if count == countmax:
-        x_values.append(currx)
-        y_values.append(curry)
-        plotgraph()
+        x_values.append(currx*steptodistance)
+        y_values.append(curry*steptodistance)
         count = 0
     count = count + 1
 
@@ -508,7 +508,7 @@ saveButton.grid(row=4, column=0, sticky='WENS')
 homeButton.grid(row=4, column=1, sticky='WENS')
 thread = threading.Thread(target=videoLoop, args=())
 thread.start()
-plotgraph()
+# plotgraph()
 
 # kick off the GUI
 root.mainloop()
