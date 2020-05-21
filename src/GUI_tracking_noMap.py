@@ -11,6 +11,7 @@ from time import sleep
 import serial
 import glob
 from imutils.video import VideoStream
+from imutils.video import FPS
 from pandas import DataFrame
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
@@ -125,8 +126,8 @@ stopEvent = threading.Event()
 def addpoint():
     global count, countmax, figure1
     if count == countmax:
-        x_values.append(currx*steptodistance)
-        y_values.append(curry*steptodistance)
+        x_values.append(currx * steptodistance)
+        y_values.append(curry * steptodistance)
         count = 0
     count = count + 1
 
@@ -202,8 +203,11 @@ def sendCommand(cmd):
         #     ser1.write(cmd)
 
 
+fps = None
+
+
 def videoLoop():
-    global vs, panelB, frame, initBB, x, y, w, h, H, W, centered
+    global vs, panelB, frame, initBB, x, y, w, h, H, W, centered, fps
     try:
         # keep looping over frames until we are instructed to stop
         while not stopEvent.is_set():
@@ -222,9 +226,12 @@ def videoLoop():
                                   (0, 255, 0), 2)
                     centered = makemove()
 
+                fps.update()
+                fps.stop()
+
                 # initialize info on screen
                 info = [
-                    ("Tracking Success", "Yes" if success else "No"),
+                    ("FPS", "{:.2f}".format(fps.fps())),
                     ("X-Move", oldxdirection),
                     ("Y-Move", oldydirection),
                     ("In Center", "Yes" if centered else "No"),
@@ -464,13 +471,14 @@ def up(e):
 
 
 def startTracking():
-    global frame, initBB, tracker, tracking
+    global frame, initBB, tracker, tracking, fps
     # if the 's' key is selected start tracking
     initBB = cv2.selectROI("Frame", frame, fromCenter=False,
                            showCrosshair=True)
-    print(initBB)
+
     # start OpenCV object tracker using the supplied bounding box
     tracker.init(frame, initBB)
+    fps = FPS().start()
 
     tracking = True
 
