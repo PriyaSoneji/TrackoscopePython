@@ -199,6 +199,7 @@ initBB = None
 def sendCommand(cmd):
     if portopen:
         ser1.write(cmd)
+        # sleep(0.4)
         # if not centered:
         #     ser1.write(cmd)
 
@@ -225,6 +226,8 @@ def videoLoop():
                     cv2.rectangle(frame, (x, y), (x + w, y + h),
                                   (0, 255, 0), 2)
                     centered = makemove()
+                else:
+                    sendCommand('S'.encode())
 
                 fps.update()
                 fps.stop()
