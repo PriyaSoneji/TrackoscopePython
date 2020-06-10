@@ -69,6 +69,9 @@ curry = 0
 count = 0
 countmax = 10
 
+# Z-Axis
+blurry = bool(False)
+
 x_values = []
 y_values = []
 
@@ -80,6 +83,12 @@ y_values.append(0)
 def swapHorizontal():
     global horizder
     horizder = not horizder
+
+
+def variance_of_laplacian(image):
+    # compute the Laplacian of the image and then return the focus
+    # measure, which is simply the variance of the Laplacian
+    return cv2.Laplacian(image, cv2.CV_64F).var()
 
 
 def swapVertical():
@@ -126,7 +135,7 @@ def addpoint():
     if count == countmax:
         x_values.append(currx)
         y_values.append(curry)
-        plotgraph()
+        # plotgraph()
         count = 0
     count = count + 1
 
@@ -228,6 +237,7 @@ def videoLoop():
                     ("X-Move", oldxdirection),
                     ("Y-Move", oldydirection),
                     ("In Center", "Yes" if centered else "No"),
+                    ("Blur", "Yes" if blurry else "No")
                 ]
 
                 for (i, (k, v)) in enumerate(info):
@@ -380,7 +390,15 @@ def makemove():
         centered = True
     else:
         centered = False
+
+    # Z-Axis Detection
+    calculateBlur()
+    if blurry:
+        print(blurry)
+
     return centered
+
+
 
 
 # allows for the manual control of the platform
@@ -428,6 +446,18 @@ figure1 = plt.Figure(figsize=(6, 5), dpi=100)
 ax = figure1.add_subplot(111)
 bar1 = FigureCanvasTkAgg(figure1, root)
 bar1.get_tk_widget().grid(row=0, column=1)
+
+
+def calculateBlur():
+    global blurry
+    image = vs.read()
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    fm = variance_of_laplacian(gray)
+    blurry = bool(False)
+    # if the focus measure is less than the supplied threshold,
+    # then the image should be considered "blurry"
+    if fm < 300:
+        blurry = bool(True)
 
 
 def plotgraph():
@@ -482,7 +512,7 @@ vFlipButton = Button(root, text="Flip Vertical Direction", command=swapVertical,
 modeButton = Button(root, text="Change Operating Mode", command=swapMode, activebackground='yellow')
 stopButton = Button(root, text="Quit the Program", command=quitTracking, activebackground='yellow')
 saveButton = Button(root, text="Save Image of Plot", command=savePlot, activebackground='yellow')
-homeButton = Button(root, text="Auto-Home", command=home, activebackground='yellow')
+homeButton = Button(root, text="Check Blur", command=calculateBlur, activebackground='yellow')
 
 root.bind('<KeyRelease>', up)
 
@@ -508,7 +538,7 @@ saveButton.grid(row=4, column=0, sticky='WENS')
 homeButton.grid(row=4, column=1, sticky='WENS')
 thread = threading.Thread(target=videoLoop, args=())
 thread.start()
-plotgraph()
+# plotgraph()
 
 # kick off the GUI
 root.mainloop()
