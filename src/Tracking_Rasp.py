@@ -149,10 +149,10 @@ def addpoint():
 def serial_ports():
     # List serial ports
     comlist = serial.tools.list_ports.comports()
-	connected = []
-	for element in comlist:
-    	connected.append(element.device)
-	print("Connected COM ports: " + str(connected))
+    connected = []
+    for element in comlist:
+        connected.append(element.device)
+    print("Connected COM ports: " + str(connected))
     return connected
 
 
