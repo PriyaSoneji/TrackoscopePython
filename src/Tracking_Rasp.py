@@ -8,7 +8,8 @@ import argparse
 import cv2
 import time
 from time import sleep
-import pyserial
+# import pyserial
+import serial.tools.list_ports
 import serial
 import glob
 from imutils.video import VideoStream
@@ -159,7 +160,8 @@ def serial_ports():
 # open Arduino Serial
 availableport = serial_ports()
 if len(availableport) > 0:
-    ser1 = serial.Serial(availableport[0], 115200)
+    # ser1 = serial.Serial (availableport[0], 115200)
+    ser1 = serial.Serial('/dev/ttyACM0', 115200)
     sleep(2)
     portopen = True
 
