@@ -8,6 +8,7 @@ import argparse
 import cv2
 import time
 from time import sleep
+import pyserial
 import serial
 import glob
 from imutils.video import VideoStream
@@ -147,29 +148,12 @@ def addpoint():
 # check for available serial ports
 def serial_ports():
     # List serial ports
-    print(sys.platform)
-    if sys.platform.startswith('win'):
-        ports = ['COM%s' % (i + 1) for i in range(50)]
-    elif sys.platform.startswith('linux') or sys.platform.startswith('cygwin'):
-        # this excludes your current terminal "/dev/tty"
-        # ports = glob.glob('/dev/tty[A-Za-z]*')
-        ports = glob.glob('/dev/tty.*')
-    elif sys.platform.startswith('darwin'):
-        ports = glob.glob('/dev/tty.*')
-    else:
-        raise EnvironmentError('Unsupported platform')
-
-    print(ports)
-
-    result = []
-    for port in ports:
-        try:
-            s = serial.Serial(port)
-            s.close()
-            result.append(port)
-        except (OSError, serial.SerialException):
-            pass
-    return result
+    comlist = serial.tools.list_ports.comports()
+	connected = []
+	for element in comlist:
+    	connected.append(element.device)
+	print("Connected COM ports: " + str(connected))
+    return connected
 
 
 # open Arduino Serial
