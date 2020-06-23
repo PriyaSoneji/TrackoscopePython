@@ -147,15 +147,19 @@ def addpoint():
 # check for available serial ports
 def serial_ports():
     # List serial ports
+    print(sys.platform)
     if sys.platform.startswith('win'):
         ports = ['COM%s' % (i + 1) for i in range(50)]
     elif sys.platform.startswith('linux') or sys.platform.startswith('cygwin'):
         # this excludes your current terminal "/dev/tty"
-        ports = glob.glob('/dev/tty[A-Za-z]*')
+        # ports = glob.glob('/dev/tty[A-Za-z]*')
+        ports = glob.glob('/dev/tty.*')
     elif sys.platform.startswith('darwin'):
         ports = glob.glob('/dev/tty.*')
     else:
         raise EnvironmentError('Unsupported platform')
+
+    print(ports)
 
     result = []
     for port in ports:
@@ -561,7 +565,7 @@ if not args.get("video", False):
         # if testDevice(x):
         #     availvid.append(x)
     # vs = VideoStream(src=(availvid[len(availvid) - 1])).start()
-    vs = VideoStream(src=1).start()
+    vs = VideoStream(src=0).start()
     sleep(1.0)
 # otherwise, grab a reference to the video file
 else:
