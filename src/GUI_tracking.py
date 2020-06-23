@@ -71,6 +71,10 @@ countmax = 10
 
 # Z-Axis
 blurry = bool(False)
+rightDirection = bool(False)
+focus = 0
+originalFocus = 0
+compareFocus = 0
 
 x_values = []
 y_values = []
@@ -268,7 +272,7 @@ def videoLoop():
 # defines how to make a move depending on location of bounding box center
 def makemove():
     global smallx, largex, centerx, smally, largey, centery, newxdirection, oldxdirection, newydirection, \
-        oldydirection, ydirection, xdirection, x, y, w, h, W, H, currx, curry
+        oldydirection, ydirection, xdirection, x, y, w, h, W, H, currx, curry, centered
     smallx = x
     largex = x + w
     centerx = (smallx + largex) / 2
@@ -392,13 +396,11 @@ def makemove():
         centered = False
 
     # Z-Axis Detection
-    calculateBlur()
+    determineFocus()
     if blurry:
-        print(blurry)
+        fixBlurMotor()
 
     return centered
-
-
 
 
 # allows for the manual control of the platform
@@ -449,15 +451,51 @@ bar1.get_tk_widget().grid(row=0, column=1)
 
 
 def calculateBlur():
-    global blurry
+    global focus
     image = vs.read()
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    fm = variance_of_laplacian(gray)
-    blurry = bool(False)
-    # if the focus measure is less than the supplied threshold,
-    # then the image should be considered "blurry"
-    if fm < 300:
+    focus = variance_of_laplacian(gray)
+    return focus
+
+
+def determineFocus():
+    global blurry
+    if calculateBlur() < 300:
         blurry = bool(True)
+    else:
+        blurry = bool(False)
+
+
+def fixBlurMotor():
+    global originalFocus, compareFocus, rightDirection, focus
+    iterations = 0
+    originalFocus = calculateBlur()
+    sendCommand('b'.encode())
+    compareFocus = calculateBlur()
+    if compareFocus > originalFocus:
+        rightDirection = bool(True)
+    else:
+        rightDirection = bool(False)
+
+    if rightDirection:
+        while focus < 300:
+            sendCommand('b'.encode())
+            calculateBlur()
+            iterations = iterations + 1
+            if iterations > 15:
+                break
+    else:
+        while focus < 300:
+            sendCommand('t'.encode())
+            calculateBlur()
+            iterations = iterations + 1
+            if iterations > 15:
+                break
+    determineFocus()
+
+
+def fixBlurCam():
+    global originalFocus, compareFocus, rightDirection
 
 
 def plotgraph():
