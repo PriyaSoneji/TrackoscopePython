@@ -6,7 +6,6 @@ import imutils
 import threading
 import argparse
 import cv2
-import time
 from time import sleep
 import serial
 import glob
@@ -15,7 +14,6 @@ from imutils.video import FPS
 from pandas import DataFrame
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-import numpy as np
 
 # define tracking variables
 x = 0
@@ -421,7 +419,7 @@ df1 = None
 figure1 = plt.Figure(figsize=(6, 5), dpi=100)
 ax = figure1.add_subplot(111)
 bar1 = FigureCanvasTkAgg(figure1, root)
-bar1.get_tk_widget().grid(row=0, column=1)
+bar1.get_tk_widget().grid(row=0, column=1, sticky='WENS')
 
 
 def calculateBlur():

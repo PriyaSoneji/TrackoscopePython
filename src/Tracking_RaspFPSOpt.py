@@ -5,11 +5,14 @@ from PIL import ImageTk
 import imutils
 import threading
 import argparse
+from picamera.array import PiRGBArray
+from picamera import PiCamera
+from threading import Thread
 import cv2
 from time import sleep
 import serial.tools.list_ports
 import serial
-from imutils.video import VideoStream
+from imutils.video.pivideostream import PiVideoStream
 from imutils.video import FPS
 from pandas import DataFrame
 import matplotlib.pyplot as plt
