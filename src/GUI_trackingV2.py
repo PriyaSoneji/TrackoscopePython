@@ -8,8 +8,6 @@ import argparse
 import cv2
 import time
 from time import sleep
-# import pyserial
-import serial.tools.list_ports
 import serial
 import glob
 from imutils.video import VideoStream
@@ -140,19 +138,31 @@ def addpoint():
 # check for available serial ports
 def serial_ports():
     # List serial ports
-    comlist = serial.tools.list_ports.comports()
-    connected = []
-    for element in comlist:
-        connected.append(element.device)
-    print("Connected COM ports: " + str(connected))
-    return connected
+    if sys.platform.startswith('win'):
+        ports = ['COM%s' % (i + 1) for i in range(50)]
+    elif sys.platform.startswith('linux') or sys.platform.startswith('cygwin'):
+        # this excludes your current terminal "/dev/tty"
+        ports = glob.glob('/dev/tty[A-Za-z]*')
+    elif sys.platform.startswith('darwin'):
+        ports = glob.glob('/dev/tty.*')
+    else:
+        raise EnvironmentError('Unsupported platform')
+
+    result = []
+    for port in ports:
+        try:
+            s = serial.Serial(port)
+            s.close()
+            result.append(port)
+        except (OSError, serial.SerialException):
+            pass
+    return result
 
 
 # open Arduino Serial
 availableport = serial_ports()
 if len(availableport) > 0:
-    # ser1 = serial.Serial (availableport[0], 115200)
-    ser1 = serial.Serial('/dev/ttyACM0', 115200)
+    ser1 = serial.Serial(availableport[0], 115200)
     sleep(2)
     portopen = True
 
@@ -534,11 +544,10 @@ stopmovButton = Button(root, text="S", command=stopMov, activebackground='yellow
 # if a video path was not supplied, grab the reference to the web cam
 if not args.get("video", False):
     print("[INFO] starting video stream...")
-    # for x in range(3):
-    # if testDevice(x):
-    #     availvid.append(x)
-    # vs = VideoStream(src=(availvid[len(availvid) - 1])).start()
-    vs = VideoStream(src=0).start()
+    for x in range(3):
+        if testDevice(x):
+            availvid.append(x)
+    vs = VideoStream(src=(availvid[len(availvid) - 1])).start()
     sleep(1.0)
 # otherwise, grab a reference to the video file
 else:
@@ -563,6 +572,7 @@ stopmovButton.grid(row=2, column=3, sticky='WENS')
 stopEvent = threading.Event()
 thread = threading.Thread(target=videoLoop, args=())
 thread.start()
+# plotgraph()
 
 root.wm_title("Trackoscope")
 root.wm_protocol("WM_DELETE_WINDOW", onClose)

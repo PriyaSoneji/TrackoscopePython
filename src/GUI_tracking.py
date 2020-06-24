@@ -105,14 +105,6 @@ def swapMode():
     cameramode = not cameramode
 
 
-def quitTracking():
-    global initBB
-    cv2.destroyAllWindows()
-    sendCommand('S'.encode())
-    vs.stop()
-    initBB = None
-
-
 def savePlot():
     figure1.savefig('output.png')
 
@@ -130,7 +122,6 @@ panelB = None
 frame = None
 thread = None
 stopEvent = None
-stopEvent = threading.Event()
 
 
 # add points to the graph and updates plot
@@ -267,6 +258,20 @@ def videoLoop():
 
     except RuntimeError:
         print("[INFO] caught a RuntimeError")
+
+
+def onClose():
+    # set the stop event, cleanup the camera, and allow the rest of
+    # the quit process to continue
+    global initBB
+    print("[INFO] closing...")
+    cv2.destroyAllWindows()
+    sendCommand('S'.encode())
+    vs.stop()
+    initBB = None
+    stopEvent.set()
+    root.quit()
+    sys.exit()
 
 
 # defines how to make a move depending on location of bounding box center
@@ -510,11 +515,10 @@ def testDevice(source):
 
 
 def startTracking():
-    global frame, initBB, tracker, tracking
+    global frame, initBB, tracker, tracking, panelB
     # if the 's' key is selected start tracking
-    initBB = cv2.selectROI("Frame", frame, fromCenter=False,
-                           showCrosshair=True)
-    print(initBB)
+    initBB = cv2.selectROI('Selection', frame, showCrosshair=True)
+    cv2.destroyWindow('Selection')
     # start OpenCV object tracker using the supplied bounding box
     tracker.init(frame, initBB)
 
@@ -526,7 +530,7 @@ plotButton = Button(root, text="Plot Graph", command=plotgraph, activebackground
 hFlipButton = Button(root, text="Flip HorizDir", command=swapHorizontal, activebackground='yellow')
 vFlipButton = Button(root, text="Flip VertDir", command=swapVertical, activebackground='yellow')
 modeButton = Button(root, text="Change Mode", command=swapMode, activebackground='yellow')
-stopButton = Button(root, text="Quit", command=quitTracking, activebackground='yellow')
+stopButton = Button(root, text="Quit", command=onClose, activebackground='yellow')
 saveButton = Button(root, text="Save Plot", command=savePlot, activebackground='yellow')
 homeButton = Button(root, text="Check Blur", command=calculateBlur, activebackground='yellow')
 yposButton = Button(root, text="Y+", command=yPos, activebackground='yellow')
@@ -564,9 +568,14 @@ xnegButton.grid(row=2, column=2, sticky='WENS')
 zposButton.grid(row=4, column=4, sticky='WENS')
 znegButton.grid(row=4, column=2, sticky='WENS')
 stopmovButton.grid(row=2, column=3, sticky='WENS')
+
+stopEvent = threading.Event()
 thread = threading.Thread(target=videoLoop, args=())
 thread.start()
 # plotgraph()
+
+root.wm_title("Trackoscope")
+root.wm_protocol("WM_DELETE_WINDOW", onClose)
 
 # kick off the GUI
 root.mainloop()
