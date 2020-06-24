@@ -159,8 +159,6 @@ if len(availableport) > 0:
 
 # construct the argument parser for opencv and parse the arguments
 ap = argparse.ArgumentParser()
-ap.add_argument("-v", "--video", type=str,
-                help="path to input video file")
 ap.add_argument("-t", "--tracker", type=str, default="csrt",
                 help="OpenCV object tracker type")
 args = vars(ap.parse_args())
@@ -195,6 +193,7 @@ def sendCommand(cmd):
         ser1.write(cmd)
         # if not centered:
         #     ser1.write(cmd)
+
 
 fps = None
 
@@ -537,18 +536,10 @@ zposButton = Button(root, text="Z+", command=zPos, activebackground='yellow')
 znegButton = Button(root, text="Z-", command=zNeg, activebackground='yellow')
 stopmovButton = Button(root, text="S", command=stopMov, activebackground='yellow')
 
-# if a video path was not supplied, grab the reference to the web cam
-if not args.get("video", False):
-    print("[INFO] starting video stream...")
-    # for x in range(3):
-    # if testDevice(x):
-    #     availvid.append(x)
-    # vs = VideoStream(src=(availvid[len(availvid) - 1])).start()
-    vs = VideoStream(src=0).start()
-    sleep(1.0)
-# otherwise, grab a reference to the video file
-else:
-    vs = cv2.VideoCapture(args["video"])
+# start video stream
+print("[INFO] starting video stream...")
+vs = PiVideoStream().start()
+sleep(1.0)
 
 startButton.grid(row=1, column=0, sticky='WENS')
 plotButton.grid(row=1, column=1, sticky='WENS')
