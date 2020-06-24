@@ -403,45 +403,6 @@ def makemove():
     return centered
 
 
-# allows for the manual control of the platform
-def manualmove():
-    global currx, curry, key
-
-    if key == '5':
-        sendCommand('S'.encode())
-    if key == '8':
-        print("Up/Down")
-        if vertder:
-            sendCommand('u'.encode())
-
-        else:
-            sendCommand('d'.encode())
-
-    if key == '2':
-        print("Up/Down")
-        if vertder:
-            sendCommand('d'.encode())
-
-        else:
-            sendCommand('u'.encode())
-
-    if key == '4':
-        print("Left/Right")
-        if horizder:
-            sendCommand('r'.encode())
-
-        else:
-            sendCommand('l'.encode())
-
-    if key == '6':
-        print("Left/Right")
-        if horizder:
-            sendCommand('l'.encode())
-
-        else:
-            sendCommand('r'.encode())
-
-
 # figure one data
 df1 = None
 figure1 = plt.Figure(figsize=(6, 5), dpi=100)
@@ -498,6 +459,34 @@ def fixBlurCam():
     global originalFocus, compareFocus, rightDirection
 
 
+def yPos():
+    sendCommand('U'.encode())
+
+
+def yNeg():
+    sendCommand('D'.encode())
+
+
+def xPos():
+    sendCommand('R'.encode())
+
+
+def xNeg():
+    sendCommand('L'.encode())
+
+
+def zPos():
+    sendCommand('T'.encode())
+
+
+def zNeg():
+    sendCommand('B'.encode())
+
+
+def stopMov():
+    sendCommand('S'.encode())
+
+
 def plotgraph():
     # grab a reference to the image panels
     global panelA, df1, figure1, ax, root
@@ -520,17 +509,6 @@ def testDevice(source):
         return True
 
 
-# get keys
-key = None
-
-
-def up(e):
-    global key
-    key = e.char
-    print(key)
-    manualmove()
-
-
 def startTracking():
     global frame, initBB, tracker, tracking
     # if the 's' key is selected start tracking
@@ -545,14 +523,19 @@ def startTracking():
 
 startButton = Button(root, text="Start Tracking", command=startTracking, activebackground='yellow')
 plotButton = Button(root, text="Plot Graph", command=plotgraph, activebackground='yellow')
-hFlipButton = Button(root, text="Flip Horizontal Direction", command=swapHorizontal, activebackground='yellow')
-vFlipButton = Button(root, text="Flip Vertical Direction", command=swapVertical, activebackground='yellow')
-modeButton = Button(root, text="Change Operating Mode", command=swapMode, activebackground='yellow')
-stopButton = Button(root, text="Quit the Program", command=quitTracking, activebackground='yellow')
-saveButton = Button(root, text="Save Image of Plot", command=savePlot, activebackground='yellow')
+hFlipButton = Button(root, text="Flip HorizDir", command=swapHorizontal, activebackground='yellow')
+vFlipButton = Button(root, text="Flip VertDir", command=swapVertical, activebackground='yellow')
+modeButton = Button(root, text="Change Mode", command=swapMode, activebackground='yellow')
+stopButton = Button(root, text="Quit", command=quitTracking, activebackground='yellow')
+saveButton = Button(root, text="Save Plot", command=savePlot, activebackground='yellow')
 homeButton = Button(root, text="Check Blur", command=calculateBlur, activebackground='yellow')
-
-root.bind('<KeyRelease>', up)
+yposButton = Button(root, text="Y+", command=yPos, activebackground='yellow')
+ynegButton = Button(root, text="Y-", command=yNeg, activebackground='yellow')
+xposButton = Button(root, text="X+", command=xPos, activebackground='yellow')
+xnegButton = Button(root, text="X-", command=xNeg, activebackground='yellow')
+zposButton = Button(root, text="Z+", command=zPos, activebackground='yellow')
+znegButton = Button(root, text="Z-", command=zNeg, activebackground='yellow')
+stopmovButton = Button(root, text="S", command=stopMov, activebackground='yellow')
 
 # if a video path was not supplied, grab the reference to the web cam
 if not args.get("video", False):
@@ -574,6 +557,13 @@ modeButton.grid(row=3, column=0, sticky='WENS')
 stopButton.grid(row=3, column=1, sticky='WENS')
 saveButton.grid(row=4, column=0, sticky='WENS')
 homeButton.grid(row=4, column=1, sticky='WENS')
+yposButton.grid(row=1, column=3, sticky='WENS')
+ynegButton.grid(row=3, column=3, sticky='WENS')
+xposButton.grid(row=2, column=4, sticky='WENS')
+xnegButton.grid(row=2, column=2, sticky='WENS')
+zposButton.grid(row=4, column=4, sticky='WENS')
+znegButton.grid(row=4, column=2, sticky='WENS')
+stopmovButton.grid(row=2, column=3, sticky='WENS')
 thread = threading.Thread(target=videoLoop, args=())
 thread.start()
 # plotgraph()
