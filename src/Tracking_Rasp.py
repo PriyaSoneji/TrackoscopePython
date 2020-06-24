@@ -124,6 +124,7 @@ panelB = None
 frame = None
 thread = None
 stopEvent = None
+stopEvent = threading.Event()
 
 
 # add points to the graph and updates plot
@@ -505,7 +506,7 @@ def testDevice(source):
 
 
 def startTracking():
-    global frame, initBB, tracker, tracking, panelB
+    global frame, initBB, tracker, tracking
     # if the 's' key is selected start tracking
     initBB = cv2.selectROI('Selection', frame, showCrosshair=True)
     cv2.destroyWindow('Selection')
@@ -560,12 +561,10 @@ zposButton.grid(row=4, column=4, sticky='WENS')
 znegButton.grid(row=4, column=2, sticky='WENS')
 stopmovButton.grid(row=2, column=3, sticky='WENS')
 
-stopEvent = threading.Event()
 thread = threading.Thread(target=videoLoop, args=())
 thread.start()
 
 root.wm_title("Trackoscope")
-root.wm_protocol("WM_DELETE_WINDOW", onClose)
 
 # kick off the GUI
 root.mainloop()
