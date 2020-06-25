@@ -187,12 +187,15 @@ else:
 initBB = None
 
 
-# sends command to the Arduino over serial port
 def sendCommand(cmd):
+    thread2 = threading.Thread(target=sendCommandThread, args=(cmd))
+    thread2.start()
+
+
+# sends command to the Arduino over serial port
+def sendCommandThread(cmd):
     if portopen:
         ser1.write(cmd)
-        # if not centered:
-        #     ser1.write(cmd)
 
 
 fps = None
