@@ -427,6 +427,7 @@ def determineFocus():
         blurry = bool(False)
 
 
+# uses a motor to fix the blur
 def fixBlurMotor():
     global originalFocus, compareFocus, rightDirection, focus
     iterations = 0
@@ -459,6 +460,7 @@ def fixBlurCam():
     global originalFocus, compareFocus, rightDirection
 
 
+# sends commands to move in all 6 directions and stop
 def yPos():
     sendCommand('U'.encode())
 
@@ -487,6 +489,7 @@ def stopMov():
     sendCommand('S'.encode())
 
 
+# plots the graph using matplotlib
 def plotgraph():
     # grab a reference to the image panels
     global panelA, df1, figure1, ax, root
@@ -499,16 +502,7 @@ def plotgraph():
     bar1.draw_idle()
 
 
-# Checks for a valid camera
-def testDevice(source):
-    print("Trying video source", source)
-    cap = cv2.VideoCapture(source)
-    if cap is None or not cap.isOpened():
-        return False
-    else:
-        return True
-
-
+# starts tracking and prompts user to select the object that they wish to track
 def startTracking():
     global frame, initBB, tracker, tracking, fps
     # if the 's' key is selected start tracking
@@ -520,6 +514,7 @@ def startTracking():
     tracking = True
 
 
+# define the buttons and their commands
 startButton = Button(root, text="Start Tracking", command=startTracking, activebackground='yellow')
 plotButton = Button(root, text="Plot Graph", command=plotgraph, activebackground='yellow')
 hFlipButton = Button(root, text="Flip HorizDir", command=swapHorizontal, activebackground='yellow')
@@ -538,9 +533,10 @@ stopmovButton = Button(root, text="S", command=stopMov, activebackground='yellow
 
 # start video stream
 print("[INFO] starting video stream...")
-vs = PiVideoStream((640, 720), 90).start()
+vs = PiVideoStream((640, 720)).start()
 sleep(1.0)
 
+# place the buttons
 startButton.grid(row=1, column=0, sticky='WENS')
 plotButton.grid(row=1, column=1, sticky='WENS')
 hFlipButton.grid(row=2, column=0, sticky='WENS')
