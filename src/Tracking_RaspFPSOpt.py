@@ -123,7 +123,6 @@ panelA = None
 panelB = None
 frame = None
 thread = None
-stopEvent = None
 stopEvent = threading.Event()
 
 
@@ -133,7 +132,6 @@ def addpoint():
     if count == countmax:
         x_values.append(currx)
         y_values.append(curry)
-        # plotgraph()
         count = 0
     count = count + 1
 
@@ -400,9 +398,9 @@ def makemove():
         centered = False
 
     # Z-Axis Detection
-    determineFocus()
-    if blurry:
-        fixBlurMotor()
+    # determineFocus()
+    # if blurry:
+    #     fixBlurMotor()
 
     return centered
 
@@ -537,7 +535,7 @@ stopmovButton = Button(root, text="S", command=stopMov, activebackground='yellow
 
 # start video stream
 print("[INFO] starting video stream...")
-vs = PiVideoStream((640, 720)).start()
+vs = PiVideoStream.start()
 sleep(1.0)
 
 # place the buttons
