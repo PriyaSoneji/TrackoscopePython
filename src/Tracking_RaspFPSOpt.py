@@ -188,14 +188,15 @@ initBB = None
 
 
 def sendCommand(cmd):
-    thread2 = threading.Thread(target=sendCommandThread, args=(cmd))
-    thread2.start()
+    global portopen, ser1
+    if portopen:
+        thread2 = threading.Thread(target=sendCommandThread, args=(cmd, ser1))
+        thread2.start()
 
 
 # sends command to the Arduino over serial port
-def sendCommandThread(cmd):
-    if portopen:
-        ser1.write(cmd)
+def sendCommandThread(cmd, serport):
+    serport.write(cmd)
 
 
 fps = None
