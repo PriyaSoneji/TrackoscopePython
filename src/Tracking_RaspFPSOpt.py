@@ -195,6 +195,8 @@ def sendCommand(cmd):
 # sends command to the Arduino over serial port
 def sendCommandThread(cmd, serport):
     serport.write(cmd)
+    if not centered:
+        serport.write(cmd)
 
 
 fps = None
