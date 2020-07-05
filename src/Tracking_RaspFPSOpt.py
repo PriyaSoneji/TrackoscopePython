@@ -137,11 +137,10 @@ def addpoint():
 
 
 # open Arduino Serial
-if len(availableport) > 0:
-    ser1 = serial.Serial('/dev/ttyACM0', 115200)
-    ser1.flush()
-    sleep(2)
-    portopen = True
+ser1 = serial.Serial('/dev/ttyACM0', 115200)
+ser1.flush()
+sleep(2)
+portopen = True
 
 # construct the argument parser for opencv and parse the arguments
 ap = argparse.ArgumentParser()
