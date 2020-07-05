@@ -47,7 +47,7 @@ centery = 0
 # flipping variables
 portopen = bool(False)
 horizder = bool(False)
-vertder = bool(False)
+vertder = bool(True)
 rotate = bool(False)
 sendrepeat = bool(False)
 centered = bool(False)
