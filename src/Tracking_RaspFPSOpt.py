@@ -227,7 +227,7 @@ def videoLoop():
                                 cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
 
             # Put Video source in Tkinter format
-            image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            image = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             image = Image.fromarray(image)
             image = ImageTk.PhotoImage(image)
 
