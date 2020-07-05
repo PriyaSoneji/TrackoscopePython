@@ -136,22 +136,10 @@ def addpoint():
     count = count + 1
 
 
-# check for available serial ports
-def serial_ports():
-    # List serial ports
-    comlist = serial.tools.list_ports.comports()
-    connected = []
-    for element in comlist:
-        connected.append(element.device)
-    print("Connected COM ports: " + str(connected))
-    return connected
-
-
 # open Arduino Serial
-availableport = serial_ports()
 if len(availableport) > 0:
-    # ser1 = serial.Serial (availableport[0], 115200)
     ser1 = serial.Serial('/dev/ttyACM0', 115200)
+    ser1.flush()
     sleep(2)
     portopen = True
 
