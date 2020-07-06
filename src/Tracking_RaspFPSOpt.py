@@ -172,6 +172,7 @@ else:
 # initialize the bounding box coordinates
 initBB = None
 
+
 # defines send command
 def sendCommand(cmd):
     global portopen, ser1
@@ -218,9 +219,7 @@ def videoLoop():
                 info = [
                     ("FPS", "{:.2f}".format(fps.fps())),
                     ("X-Move", oldxdirection),
-                    ("Y-Move", oldydirection),
-                    ("In Center", "Yes" if centered else "No"),
-                    ("Blur", "Yes" if blurry else "No")
+                    ("Y-Move", oldydirection)
                 ]
 
                 for (i, (k, v)) in enumerate(info):
@@ -229,7 +228,7 @@ def videoLoop():
                                 cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
 
             # Put Video source in Tkinter format
-            image = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             image = Image.fromarray(image)
             image = ImageTk.PhotoImage(image)
 
