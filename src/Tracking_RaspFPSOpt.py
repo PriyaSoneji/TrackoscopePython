@@ -529,7 +529,7 @@ stopmovButton = Button(root, text="S", command=stopMov, activebackground='yellow
 
 # start video stream
 print("[INFO] starting video stream...")
-vs = PiVideoStream().start()
+vs = PiVideoStream(resolution=(320, 240)).start()
 sleep(2.0)
 
 # place the buttons
