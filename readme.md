@@ -9,13 +9,13 @@ This program is to be run on a Raspberry Pi. Uses Picamera library and the Arduc
 This program is to be run on a laptop. It has the full object-tracking capability and has a user-friendly GUI (work-in-progress)
 
 ### PiFPSTest.py
-This program is to be run on a Raspberry Pi with a Raspberry Pi Camera. Optimizes FPS through threading.
+This program is to be run on a Raspberry Pi with a Raspberry Pi Camera. Optimizes FPS through threading. Max FPS achieved: 160 fps
 
 ### Tracking_Rasp.py
-This program is to be run on a Raspberry Pi. It has limited object-tracking capability and has a user-friendly GUI. Treats the Pi Camera as a webcam. There is current issues with communicating to the Arduino (work-in-progress)
+This program is to be run on a Raspberry Pi. It has limited object-tracking capability and has a user-friendly GUI. Treats the Pi Camera as a webcam.
 
 ### Tracking_RaspFPSOpt.py
-This program is to be run on a Raspberry Pi. It has limited object-tracking capability and has a user-friendly GUI. Uses a Pi Camera library to try and optimize FPS. There is current issues with communicating to the Arduino (work-in-progress)
+This program is to be run on a Raspberry Pi. It has limited object-tracking capability and has a user-friendly GUI. Uses a Pi Camera library to try and optimize FPS.
 
 ### object_tracking.py
 This program is to be run on a laptop. It is the earliest stage of object-tracking.
