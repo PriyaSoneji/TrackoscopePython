@@ -200,7 +200,7 @@ def videoLoop():
             # grab the frame from the video stream and resize it to
             # have a maximum width of 300 pixels
             frame = vs.read()
-            frame = imutils.resize(frame, width=600)
+            frame = imutils.resize(frame, width=400)
             (H, W) = frame.shape[:2]
             # check to see if we are currently tracking an object
             if initBB is not None:
@@ -529,7 +529,7 @@ stopmovButton = Button(root, text="S", command=stopMov, activebackground='yellow
 
 # start video stream
 print("[INFO] starting video stream...")
-vs = PiVideoStream(resolution=(320, 240)).start()
+vs = PiVideoStream(resolution=(320, 240), framerate=32).start()
 sleep(2.0)
 
 # place the buttons
