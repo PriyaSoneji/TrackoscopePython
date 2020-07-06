@@ -85,16 +85,17 @@ x_values.append(0)
 y_values.append(0)
 
 
-# button press commands
-def swapHorizontal():
-    global horizder
-    horizder = not horizder
-
-
+# checks for bluriness
 def variance_of_laplacian(image):
     # compute the Laplacian of the image and then return the focus
     # measure, which is simply the variance of the Laplacian
     return cv2.Laplacian(image, cv2.CV_64F).var()
+
+
+# button press commands
+def swapHorizontal():
+    global horizder
+    horizder = not horizder
 
 
 def swapVertical():
@@ -171,7 +172,7 @@ else:
 # initialize the bounding box coordinates
 initBB = None
 
-
+# defines send command
 def sendCommand(cmd):
     global portopen, ser1
     if portopen:
@@ -189,6 +190,7 @@ def sendCommandThread(cmd, serport):
 fps = None
 
 
+# main video loop that sets everything and refreshes the screen
 def videoLoop():
     global vs, panelB, frame, initBB, x, y, w, h, H, W, centered, fps
     try:
@@ -246,6 +248,7 @@ def videoLoop():
         print("[INFO] caught a RuntimeError")
 
 
+# shuts everything down when window closed
 def onClose():
     # set the stop event, cleanup the camera, and allow the rest of
     # the quit process to continue
@@ -402,6 +405,7 @@ bar1 = FigureCanvasTkAgg(figure1, root)
 bar1.get_tk_widget().grid(row=0, column=1)
 
 
+# calculates the blur and returns the blur number
 def calculateBlur():
     global focus
     image = vs.read()
@@ -410,6 +414,7 @@ def calculateBlur():
     return focus
 
 
+# determines if it is in focus or not
 def determineFocus():
     global blurry
     if calculateBlur() < 300:
@@ -447,6 +452,7 @@ def fixBlurMotor():
     determineFocus()
 
 
+# uses autofocus to fix the blurriness
 def fixBlurCam():
     global originalFocus, compareFocus, rightDirection
 
@@ -544,6 +550,7 @@ zposButton.grid(row=4, column=4, sticky='WENS')
 znegButton.grid(row=4, column=2, sticky='WENS')
 stopmovButton.grid(row=2, column=3, sticky='WENS')
 
+# start videoloop thread
 thread = threading.Thread(target=videoLoop, args=())
 thread.start()
 
