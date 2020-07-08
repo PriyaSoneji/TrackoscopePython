@@ -174,7 +174,7 @@ def sendCommandThread(cmd, serport):
 
 
 fps = FPS().start()
-fps2 = 0
+fps2 = None
 
 
 # main video loop that sets everything and refreshes the screen
@@ -206,21 +206,21 @@ def videoLoop():
                 fps2.update()
                 fps2.stop()
 
+                # initialize info on screen
+                info = [
+                    ("FPS1", "{:.2f}".format(fps.fps())),
+                    ("FPS2", "{:.2f}".format(fps2.fps())),
+                    ("X-Move", oldxdirection),
+                    ("Y-Move", oldydirection)
+                ]
+
+                for (i, (k, v)) in enumerate(info):
+                    text = "{}: {}".format(k, v)
+                    cv2.putText(frame, text, (10, H - ((i * 20) + 20)),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 2)
+
             fps.update()
             fps.stop()
-
-            # initialize info on screen
-            info = [
-                ("FPS1", "{:.2f}".format(fps.fps())),
-                ("FPS2", "{:.2f}".format(fps2.fps())),
-                ("X-Move", oldxdirection),
-                ("Y-Move", oldydirection)
-            ]
-
-            for (i, (k, v)) in enumerate(info):
-                text = "{}: {}".format(k, v)
-                cv2.putText(frame, text, (10, H - ((i * 20) + 20)),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 2)
 
             # Put Video source in Tkinter format
             image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
