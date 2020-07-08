@@ -29,8 +29,7 @@ while True:
     frame = vs.read()
     frame = imutils.resize(frame, width=800)
     (H, W) = frame.shape[:2]
-    ovcenterx = W / 2
-    # check to see if we are currently tracking an object
+
     # update the FPS counter
     fps.update()
     fps.stop()
