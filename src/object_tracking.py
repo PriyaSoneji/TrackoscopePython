@@ -30,7 +30,7 @@ centery = 0
 # flipping variables
 portopen = bool(False)
 horizder = bool(False)
-vertder = bool(False)
+vertder = bool(True)
 rotate = bool(False)
 sendrepeat = bool(False)
 centered = bool(False)
@@ -41,11 +41,6 @@ xrangehl = 55
 xrangell = 45
 yrangehl = 55
 yrangell = 45
-xrangehs = 65
-xrangels = 35
-yrangehs = 65
-yrangels = 35
-availvid = []
 
 
 # open Arduino Serial
@@ -64,17 +59,7 @@ args = vars(ap.parse_args())
 
 # defines send command
 def sendCommand(cmd):
-    global portopen, ser1
-    if portopen:
-        thread2 = threading.Thread(target=sendCommandThread, args=(cmd, ser1))
-        thread2.start()
-
-
-# sends command to the Arduino over serial port
-def sendCommandThread(cmd, serport):
-    serport.write(cmd)
-    if not centered:
-        serport.write(cmd)
+    ser1.write(cmd)
 
 
 # extract the OpenCV version info
@@ -168,7 +153,7 @@ while True:
     frame = frame[1] if args.get("video", False) else frame
     if frame is None:
         break
-    frame = imutils.resize(frame, width=800)
+    frame = imutils.resize(frame, width=400)
     (H, W) = frame.shape[:2]
     ovcenterx = W / 2
     # check to see if we are currently tracking an object
