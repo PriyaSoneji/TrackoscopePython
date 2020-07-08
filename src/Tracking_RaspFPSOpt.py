@@ -47,7 +47,7 @@ portopen = bool(False)
 horizder = bool(False)
 vertder = bool(True)
 rotate = bool(False)
-sendrepeat = bool(True)
+sendrepeat = bool(False)
 centered = bool(False)
 tracking = bool(False)
 
@@ -278,7 +278,8 @@ def makemove():
             addpoint()
     else:
         newxdirection = 'X'
-    if (oldxdirection != newxdirection) or sendrepeat:
+
+    if oldxdirection != newxdirection:
         sendCommand(newxdirection.encode())
         oldxdirection = newxdirection
 
@@ -303,7 +304,7 @@ def makemove():
             addpoint()
     else:
         newydirection = 'Y'
-    if (oldydirection != newydirection) or sendrepeat:
+    if (oldydirection != newydirection) or not centered:
         sendCommand(newydirection.encode())
         oldydirection = newydirection
 
