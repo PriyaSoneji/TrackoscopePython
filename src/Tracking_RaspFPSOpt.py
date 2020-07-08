@@ -188,7 +188,7 @@ def videoLoop():
                                       (0, 255, 0), 2)
                     else:
                         cv2.rectangle(frame, (x, y), (x + w, y + h),
-                                      (255, 0, 0), 2)
+                                      (0, 0, 255), 2)
 
             fps.update()
             fps.stop()
@@ -274,6 +274,7 @@ def makemove():
         newxdirection = 'X'
     if (oldxdirection != newxdirection) or sendrepeat:
         sendCommand(newxdirection.encode())
+        ser1.flush()
         oldxdirection = newxdirection
 
     # Send Y direction
@@ -299,6 +300,7 @@ def makemove():
         newydirection = 'Y'
     if (oldydirection != newydirection) or sendrepeat:
         sendCommand(newydirection.encode())
+        ser1.flush()
         oldydirection = newydirection
 
     if (newydirection == 'Y') and (newxdirection == 'X'):
