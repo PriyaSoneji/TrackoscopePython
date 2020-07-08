@@ -9,7 +9,6 @@ import cv2
 from time import sleep
 import serial.tools.list_ports
 import serial
-from imutils.video import VideoStream
 from imutils.video.pivideostream import PiVideoStream
 from imutils.video import FPS
 from pandas import DataFrame
@@ -314,7 +313,7 @@ def makemove():
 
 # figure one data
 df1 = None
-figure1 = plt.Figure(figsize=(6, 5), dpi=100)
+figure1 = plt.Figure(figsize=(5, 4), dpi=100)
 ax = figure1.add_subplot(111)
 bar1 = FigureCanvasTkAgg(figure1, root)
 bar1.get_tk_widget().grid(row=0, column=1)
