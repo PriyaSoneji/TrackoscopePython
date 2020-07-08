@@ -155,7 +155,10 @@ initBB = None
 
 # defines send command
 def sendCommand(cmd):
+    global centered
     ser1.write(cmd)
+    if not centered:
+        ser1.write(cmd)
 
 
 fps = FPS().start()
@@ -444,7 +447,7 @@ stopmovButton = Button(root, text="S", command=stopMov, activebackground='yellow
 
 # start video stream
 print("[INFO] starting video stream...")
-vs = PiVideoStream(resolution=(640, 480)).start()
+vs = PiVideoStream().start()
 sleep(1.0)
 
 # place the buttons
