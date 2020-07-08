@@ -4,6 +4,7 @@ import argparse
 import imutils
 import threading
 import time
+from imutils.video import VideoStream
 from imutils.video.pivideostream import PiVideoStream
 import cv2
 import serial
@@ -20,7 +21,7 @@ portopen = True
 
 # construct the argument parser and parse the arguments
 ap = argparse.ArgumentParser()
-ap.add_argument("-t", "--tracker", type=str, default="kcf",
+ap.add_argument("-t", "--tracker", type=str, default="csrt",
                 help="OpenCV object tracker type")
 args = vars(ap.parse_args())
 
@@ -55,6 +56,9 @@ initBB = None
 
 # start video stream
 print("[INFO] starting video stream...")
+# if you want to run on laptop
+# vs = VideoStream(src=0).start()
+# if you want to run on Raspberry Pi
 vs = PiVideoStream().start()
 sleep(2.0)
 
@@ -67,7 +71,7 @@ while True:
     frame = frame[1] if args.get("video", False) else frame
     if frame is None:
         break
-    frame = imutils.resize(frame, width=400)
+    frame = imutils.resize(frame, width=500)
     (H, W) = frame.shape[:2]
     ovcenterx = W / 2
     # check to see if we are currently tracking an object

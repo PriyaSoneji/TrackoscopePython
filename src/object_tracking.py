@@ -4,6 +4,7 @@ import argparse
 import imutils
 import threading
 import time
+from imutils.video import VideoStream
 from imutils.video.pivideostream import PiVideoStream
 import cv2
 import serial
@@ -37,18 +38,16 @@ centered = bool(False)
 cameramode = bool(True)
 
 # range limits
-xrangehl = 55
-xrangell = 45
-yrangehl = 55
-yrangell = 45
-
+xrangehl = 65
+xrangell = 35
+yrangehl = 65
+yrangell = 35
 
 # open Arduino Serial
 ser1 = serial.Serial('/dev/ttyACM0', 115200)
 ser1.flush()
 sleep(2)
 portopen = True
-
 
 # construct the argument parser and parse the arguments
 ap = argparse.ArgumentParser()
@@ -85,14 +84,13 @@ else:
 # initialize the bounding box coordinates
 initBB = None
 
-
 # start video stream
 print("[INFO] starting video stream...")
+# if you want to run on laptop
+# vs = VideoStream(src=0).start()
+# if you want to run on Raspberry Pi
 vs = PiVideoStream().start()
 sleep(2.0)
-
-# initialize the FPS throughput estimator
-fps = None
 
 
 # defines how to make a move depending on location of bounding box center
@@ -147,13 +145,16 @@ def makemove():
     return centered
 
 
+# initialize the FPS throughput estimator
+fps = FPS().start()
+
 # loop over frames from the video stream
 while True:
     frame = vs.read()
     frame = frame[1] if args.get("video", False) else frame
     if frame is None:
         break
-    frame = imutils.resize(frame, width=400)
+    frame = imutils.resize(frame, width=500)
     (H, W) = frame.shape[:2]
     ovcenterx = W / 2
     # check to see if we are currently tracking an object
@@ -163,22 +164,28 @@ while True:
         if success:
             (x, y, w, h) = [int(v) for v in box]
             centered = makemove()
-            cv2.rectangle(frame, (x, y), (x + w, y + h),
-                          (0, 255, 0), 2)
-        # update the FPS counter
-        fps.update()
-        fps.stop()
+            if centered:
+                cv2.rectangle(frame, (x, y), (x + w, y + h),
+                              (0, 255, 0), 2)
+            else:
+                cv2.rectangle(frame, (x, y), (x + w, y + h),
+                              (255, 0, 0), 2)
 
-        # initialize info on screen
-        info = [
-            ("FPS", "{:.2f}".format(fps.fps())),
-            ("X-Move", oldxdirection),
-            ("Y-Move", oldydirection)
-        ]
-        for (i, (k, v)) in enumerate(info):
-            text = "{}: {}".format(k, v)
-            cv2.putText(frame, text, (10, H - ((i * 20) + 20)),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+    # update the FPS counter
+    fps.update()
+    fps.stop()
+
+    # initialize info on screen
+    info = [
+        ("FPS", "{:.2f}".format(fps.fps())),
+        ("X-Move", oldxdirection),
+        ("Y-Move", oldydirection)
+    ]
+    for (i, (k, v)) in enumerate(info):
+        text = "{}: {}".format(k, v)
+        cv2.putText(frame, text, (10, H - ((i * 20) + 20)),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+
     # show the output frame
     cv2.imshow("Frame", frame)
     key = cv2.waitKey(1) & 0xFF
@@ -189,7 +196,6 @@ while True:
                                showCrosshair=True)
         # start OpenCV object tracker using the supplied bounding box
         tracker.init(frame, initBB)
-        fps = FPS().start()
 
     # if the 'q' key was pressed, break from the loop
     elif key == ord("q"):

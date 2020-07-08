@@ -5,13 +5,11 @@ from PIL import ImageTk
 import imutils
 import threading
 import argparse
-from picamera.array import PiRGBArray
-from picamera import PiCamera
-from threading import Thread
 import cv2
 from time import sleep
 import serial.tools.list_ports
 import serial
+from imutils.video import VideoStream
 from imutils.video.pivideostream import PiVideoStream
 from imutils.video import FPS
 from pandas import DataFrame
@@ -51,19 +49,13 @@ vertder = bool(True)
 rotate = bool(False)
 sendrepeat = bool(False)
 centered = bool(False)
-cameramode = bool(True)
 tracking = bool(False)
 
 # range limits
-xrangehl = 55
-xrangell = 45
-yrangehl = 55
-yrangell = 45
-xrangehs = 60
-xrangels = 40
-yrangehs = 60
-yrangels = 40
-availvid = []
+xrangehl = 65
+xrangell = 35
+yrangehl = 65
+yrangell = 35
 
 # graphing stuff
 currx = 0
@@ -103,19 +95,8 @@ def swapVertical():
     vertder = not vertder
 
 
-def swapMode():
-    global cameramode
-    cameramode = not cameramode
-
-
 def savePlot():
     figure1.savefig('output.png')
-
-
-def home():
-    if cameramode:
-        if currx > 0 and currx > 70:
-            print("moving back")
 
 
 # initialize the window toolkit along with the two image panels
@@ -175,20 +156,10 @@ initBB = None
 
 # defines send command
 def sendCommand(cmd):
-    global portopen, ser1
-    if portopen:
-        thread2 = threading.Thread(target=sendCommandThread, args=(cmd, ser1))
-        thread2.start()
+    ser1.write(cmd)
 
 
-# sends command to the Arduino over serial port
-def sendCommandThread(cmd, serport):
-    serport.write(cmd)
-    if not centered:
-        serport.write(cmd)
-
-
-fps = None
+fps = FPS().start()
 
 
 # main video loop that sets everything and refreshes the screen
@@ -202,30 +173,35 @@ def videoLoop():
             frame = vs.read()
             frame = imutils.resize(frame, width=400)
             (H, W) = frame.shape[:2]
+
             # check to see if we are currently tracking an object
             if initBB is not None:
                 # grab the new bounding box coordinates of the object
                 (success, box) = tracker.update(frame)
                 if success:
                     (x, y, w, h) = [int(v) for v in box]
-                    cv2.rectangle(frame, (x, y), (x + w, y + h),
-                                  (0, 255, 0), 2)
                     centered = makemove()
+                    if centered:
+                        cv2.rectangle(frame, (x, y), (x + w, y + h),
+                                      (0, 255, 0), 2)
+                    else:
+                        cv2.rectangle(frame, (x, y), (x + w, y + h),
+                                      (255, 0, 0), 2)
 
-                fps.update()
-                fps.stop()
+            fps.update()
+            fps.stop()
 
-                # initialize info on screen
-                info = [
-                    ("FPS", "{:.2f}".format(fps.fps())),
-                    ("X-Move", oldxdirection),
-                    ("Y-Move", oldydirection)
-                ]
+            # initialize info on screen
+            info = [
+                ("FPS", "{:.2f}".format(fps.fps())),
+                ("X-Move", oldxdirection),
+                ("Y-Move", oldydirection)
+            ]
 
-                for (i, (k, v)) in enumerate(info):
-                    text = "{}: {}".format(k, v)
-                    cv2.putText(frame, text, (10, H - ((i * 20) + 20)),
-                                cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+            for (i, (k, v)) in enumerate(info):
+                text = "{}: {}".format(k, v)
+                cv2.putText(frame, text, (10, H - ((i * 20) + 20)),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
 
             # Put Video source in Tkinter format
             image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -273,117 +249,57 @@ def makemove():
     largey = y + h
     centery = (smally + largey) / 2
 
-    # large movements
-    if cameramode:
-        # Send X direction
-        if ((centerx / W) * 100) > xrangehl:
-            if horizder:
-                newxdirection = 'L'
-                currx = currx - 1
-                addpoint()
-            else:
-                newxdirection = 'R'
-                currx = currx + 1
-                addpoint()
-        elif ((centerx / W) * 100) < xrangell:
-            if horizder:
-                newxdirection = 'R'
-                currx = currx + 1
-                addpoint()
-            else:
-                newxdirection = 'L'
-                currx = currx - 1
-                addpoint()
+    # Send X direction
+    if ((centerx / W) * 100) > xrangehl:
+        if horizder:
+            newxdirection = 'L'
+            currx = currx - 1
+            addpoint()
         else:
-            newxdirection = 'X'
-        if (oldxdirection != newxdirection) or sendrepeat:
-            sendCommand(newxdirection.encode())
-            oldxdirection = newxdirection
-
-        # Send Y direction
-        if ((centery / H) * 100) > yrangehl:
-            if vertder:
-                newydirection = 'D'
-                curry = curry + 1
-                addpoint()
-            else:
-                newydirection = 'U'
-                curry = curry - 1
-                addpoint()
-        elif ((centery / H) * 100) < yrangell:
-            if vertder:
-                newydirection = 'U'
-                curry = curry - 1
-                addpoint()
-            else:
-                newydirection = 'D'
-                curry = curry + 1
-                addpoint()
+            newxdirection = 'R'
+            currx = currx + 1
+            addpoint()
+    elif ((centerx / W) * 100) < xrangell:
+        if horizder:
+            newxdirection = 'R'
+            currx = currx + 1
+            addpoint()
         else:
-            newydirection = 'Y'
-        if (oldydirection != newydirection) or sendrepeat:
-            sendCommand(newydirection.encode())
-            oldydirection = newydirection
+            newxdirection = 'L'
+            currx = currx - 1
+            addpoint()
+    else:
+        newxdirection = 'X'
+    if (oldxdirection != newxdirection) or sendrepeat:
+        sendCommand(newxdirection.encode())
+        oldxdirection = newxdirection
 
-    # small movements
-    if not cameramode:
-        # Send X direction
-        if ((centerx / W) * 100) > xrangehs:
-            if horizder:
-                xdirection = 'l'
-                currx = currx + 1
-                addpoint()
-
-            else:
-                xdirection = 'r'
-                currx = currx - 1
-                addpoint()
-
-        elif ((centerx / W) * 100) < xrangels:
-            if horizder:
-                xdirection = 'r'
-                currx = currx - 1
-                addpoint()
-
-            else:
-                xdirection = 'l'
-                currx = currx + 1
-                addpoint()
-
+    # Send Y direction
+    if ((centery / H) * 100) > yrangehl:
+        if vertder:
+            newydirection = 'D'
+            curry = curry + 1
+            addpoint()
         else:
-            xdirection = 'x'
-        if (xdirection != 'x') or sendrepeat:
-            sendCommand(xdirection.encode())
-        # Send Y direction
-        if ((centery / H) * 100) > yrangehs:
-            if vertder:
-                ydirection = 'd'
-                curry = curry + 1
-                addpoint()
-
-            else:
-                ydirection = 'u'
-                curry = curry - 1
-                addpoint()
-
-        elif ((centery / H) * 100) < yrangels:
-            if vertder:
-                ydirection = 'u'
-                curry = curry - 1
-                addpoint()
-
-            else:
-                ydirection = 'd'
-                curry = curry + 1
-                addpoint()
-
+            newydirection = 'U'
+            curry = curry - 1
+            addpoint()
+    elif ((centery / H) * 100) < yrangell:
+        if vertder:
+            newydirection = 'U'
+            curry = curry - 1
+            addpoint()
         else:
-            ydirection = 'y'
+            newydirection = 'D'
+            curry = curry + 1
+            addpoint()
+    else:
+        newydirection = 'Y'
+    if (oldydirection != newydirection) or sendrepeat:
+        sendCommand(newydirection.encode())
+        oldydirection = newydirection
 
-        if (ydirection != 'y') or sendrepeat:
-            sendCommand(ydirection.encode())
-
-    if ((newydirection == 'Y') and (newxdirection == 'X')) or ((ydirection == 'y') and (xdirection == 'x')):
+    if (newydirection == 'Y') and (newxdirection == 'X'):
         centered = True
     else:
         centered = False
@@ -506,7 +422,6 @@ def startTracking():
     cv2.destroyWindow('Selection')
     # start OpenCV object tracker using the supplied bounding box
     tracker.init(frame, initBB)
-    fps = FPS().start()
     tracking = True
 
 
@@ -515,7 +430,7 @@ startButton = Button(root, text="Start Tracking", command=startTracking, activeb
 plotButton = Button(root, text="Plot Graph", command=plotgraph, activebackground='yellow')
 hFlipButton = Button(root, text="Flip HorizDir", command=swapHorizontal, activebackground='yellow')
 vFlipButton = Button(root, text="Flip VertDir", command=swapVertical, activebackground='yellow')
-modeButton = Button(root, text="Change Mode", command=swapMode, activebackground='yellow')
+modeButton = Button(root, text="Change Mode", command=plotgraph, activebackground='yellow')
 stopButton = Button(root, text="Quit", command=onClose, activebackground='yellow')
 saveButton = Button(root, text="Save Plot", command=savePlot, activebackground='yellow')
 homeButton = Button(root, text="Check Blur", command=calculateBlur, activebackground='yellow')
@@ -529,8 +444,8 @@ stopmovButton = Button(root, text="S", command=stopMov, activebackground='yellow
 
 # start video stream
 print("[INFO] starting video stream...")
-vs = PiVideoStream(resolution=(320, 240), framerate=32).start()
-sleep(2.0)
+vs = PiVideoStream().start()
+sleep(1.0)
 
 # place the buttons
 startButton.grid(row=1, column=0, sticky='WENS')

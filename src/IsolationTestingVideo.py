@@ -18,7 +18,10 @@ portopen = True
 
 # start video stream
 print("[INFO] starting video stream...")
-vs = VideoStream(src=0).start()
+# if you want to run on laptop
+# vs = VideoStream(src=0).start()
+# if you want to run on Raspberry Pi
+vs = PiVideoStream().start()
 sleep(2.0)
 
 # initialize the FPS throughput estimator
@@ -27,7 +30,7 @@ fps = FPS().start()
 # loop over frames from the video stream
 while True:
     frame = vs.read()
-    frame = imutils.resize(frame, width=800)
+    frame = imutils.resize(frame, width=500)
     (H, W) = frame.shape[:2]
 
     # update the FPS counter
