@@ -281,6 +281,7 @@ def makemove():
 
     if oldxdirection != newxdirection:
         sendCommand(newxdirection.encode())
+        ser1.flush()
         oldxdirection = newxdirection
 
     # Send Y direction
@@ -304,8 +305,9 @@ def makemove():
             addpoint()
     else:
         newydirection = 'Y'
-    if (oldydirection != newydirection) or not centered:
+    if oldydirection != newydirection:
         sendCommand(newydirection.encode())
+        ser1.flush()
         oldydirection = newydirection
 
     if (newydirection == 'Y') and (newxdirection == 'X'):
