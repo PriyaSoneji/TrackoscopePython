@@ -7,6 +7,7 @@ import threading
 import argparse
 import cv2
 from time import sleep
+import pyautogui
 import serial.tools.list_ports
 import serial
 from imutils.video.pivideostream import PiVideoStream
@@ -46,7 +47,7 @@ portopen = bool(False)
 horizder = bool(False)
 vertder = bool(True)
 rotate = bool(False)
-sendrepeat = bool(False)
+sendrepeat = bool(True)
 centered = bool(False)
 tracking = bool(False)
 
@@ -96,6 +97,11 @@ def swapVertical():
 
 def savePlot():
     figure1.savefig('output.png')
+
+
+def screenshot():
+    myScreenshot = pyautogui.screenshot()
+    myScreenshot.save(r'capture.png')
 
 
 # initialize the window toolkit along with the two image panels
@@ -274,7 +280,6 @@ def makemove():
         newxdirection = 'X'
     if (oldxdirection != newxdirection) or sendrepeat:
         sendCommand(newxdirection.encode())
-        ser1.flush()
         oldxdirection = newxdirection
 
     # Send Y direction
@@ -300,7 +305,6 @@ def makemove():
         newydirection = 'Y'
     if (oldydirection != newydirection) or sendrepeat:
         sendCommand(newydirection.encode())
-        ser1.flush()
         oldydirection = newydirection
 
     if (newydirection == 'Y') and (newxdirection == 'X'):
@@ -434,7 +438,7 @@ startButton = Button(root, text="Start Tracking", command=startTracking, activeb
 plotButton = Button(root, text="Plot Graph", command=plotgraph, activebackground='yellow')
 hFlipButton = Button(root, text="Flip HorizDir", command=swapHorizontal, activebackground='yellow')
 vFlipButton = Button(root, text="Flip VertDir", command=swapVertical, activebackground='yellow')
-modeButton = Button(root, text="Change Mode", command=plotgraph, activebackground='yellow')
+screenButton = Button(root, text="Screenshot", command=screenshot, activebackground='yellow')
 stopButton = Button(root, text="Quit", command=onClose, activebackground='yellow')
 saveButton = Button(root, text="Save Plot", command=savePlot, activebackground='yellow')
 homeButton = Button(root, text="Check Blur", command=calculateBlur, activebackground='yellow')
@@ -457,7 +461,7 @@ startButton.grid(row=1, column=0, sticky='WENS')
 plotButton.grid(row=1, column=1, sticky='WENS')
 hFlipButton.grid(row=2, column=0, sticky='WENS')
 vFlipButton.grid(row=2, column=1, sticky='WENS')
-modeButton.grid(row=3, column=0, sticky='WENS')
+screenButton.grid(row=3, column=0, sticky='WENS')
 stopButton.grid(row=3, column=1, sticky='WENS')
 saveButton.grid(row=4, column=0, sticky='WENS')
 homeButton.grid(row=4, column=1, sticky='WENS')
