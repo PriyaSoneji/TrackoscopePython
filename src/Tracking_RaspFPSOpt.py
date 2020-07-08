@@ -179,7 +179,7 @@ fps2 = None
 
 # main video loop that sets everything and refreshes the screen
 def videoLoop():
-    global vs, panelB, frame, initBB, x, y, w, h, H, W, centered, fps
+    global vs, panelB, frame, initBB, x, y, w, h, H, W, centered, fps, fps2
     try:
         # keep looping over frames until we are instructed to stop
         while not stopEvent.is_set():
