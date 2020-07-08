@@ -159,12 +159,18 @@ else:
 initBB = None
 
 
-# defines send command
 def sendCommand(cmd):
-    global centered
-    ser1.write(cmd)
+    global portopen, ser1
+    if portopen:
+        thread2 = threading.Thread(target=sendCommandThread, args=(cmd, ser1))
+        thread2.start()
+
+
+# sends command to the Arduino over serial port
+def sendCommandThread(cmd, serport):
+    serport.write(cmd)
     if not centered:
-        ser1.write(cmd)
+        serport.write(cmd)
 
 
 fps = FPS().start()
@@ -281,7 +287,7 @@ def makemove():
 
     if oldxdirection != newxdirection:
         sendCommand(newxdirection.encode())
-        ser1.flush()
+        # ser1.flush()
         oldxdirection = newxdirection
 
     # Send Y direction
@@ -307,7 +313,7 @@ def makemove():
         newydirection = 'Y'
     if oldydirection != newydirection:
         sendCommand(newydirection.encode())
-        ser1.flush()
+        # ser1.flush()
         oldydirection = newydirection
 
     if (newydirection == 'Y') and (newxdirection == 'X'):
