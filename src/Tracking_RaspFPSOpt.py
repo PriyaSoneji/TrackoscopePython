@@ -433,6 +433,7 @@ modeButton = Button(root, text="Change Mode", command=plotgraph, activebackgroun
 stopButton = Button(root, text="Quit", command=onClose, activebackground='yellow')
 saveButton = Button(root, text="Save Plot", command=savePlot, activebackground='yellow')
 homeButton = Button(root, text="Check Blur", command=calculateBlur, activebackground='yellow')
+# buttons to control the movement
 yposButton = Button(root, text="Y+", command=yPos, activebackground='yellow')
 ynegButton = Button(root, text="Y-", command=yNeg, activebackground='yellow')
 xposButton = Button(root, text="X+", command=xPos, activebackground='yellow')
@@ -443,7 +444,7 @@ stopmovButton = Button(root, text="S", command=stopMov, activebackground='yellow
 
 # start video stream
 print("[INFO] starting video stream...")
-vs = PiVideoStream().start()
+vs = PiVideoStream(resolution=(640, 480)).start()
 sleep(1.0)
 
 # place the buttons
