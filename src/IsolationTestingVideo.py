@@ -5,16 +5,10 @@ import imutils
 import threading
 import time
 from imutils.video import VideoStream
-from imutils.video.pivideostream import PiVideoStream
+# from imutils.video.pivideostream import PiVideoStream
 import cv2
 import serial
 from time import sleep
-
-# open Arduino Serial
-ser1 = serial.Serial('/dev/ttyACM0', 115200)
-ser1.flush()
-sleep(2)
-portopen = True
 
 # start video stream
 print("[INFO] starting video stream...")
@@ -44,7 +38,7 @@ while True:
     for (i, (k, v)) in enumerate(info):
         text = "{}: {}".format(k, v)
         cv2.putText(frame, text, (10, H - ((i * 20) + 20)),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 0), 2)
 
     # show the output frame
     cv2.imshow("Frame", frame)
