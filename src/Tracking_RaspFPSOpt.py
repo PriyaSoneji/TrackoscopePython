@@ -174,12 +174,11 @@ def sendCommandThread(cmd, serport):
 
 
 fps = FPS().start()
-fps2 = None
 
 
 # main video loop that sets everything and refreshes the screen
 def videoLoop():
-    global vs, panelB, frame, initBB, x, y, w, h, H, W, centered, fps, fps2
+    global vs, panelB, frame, initBB, x, y, w, h, H, W, centered, fps
     try:
         # keep looping over frames until we are instructed to stop
         while not stopEvent.is_set():
@@ -203,24 +202,20 @@ def videoLoop():
                         cv2.rectangle(frame, (x, y), (x + w, y + h),
                                       (0, 0, 255), 2)
 
-                fps2.update()
-                fps2.stop()
-
-                # initialize info on screen
-                info = [
-                    ("FPS1", "{:.2f}".format(fps.fps())),
-                    ("FPS2", "{:.2f}".format(fps2.fps())),
-                    ("X-Move", oldxdirection),
-                    ("Y-Move", oldydirection)
-                ]
-
-                for (i, (k, v)) in enumerate(info):
-                    text = "{}: {}".format(k, v)
-                    cv2.putText(frame, text, (10, H - ((i * 20) + 20)),
-                                cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 2)
-
             fps.update()
             fps.stop()
+
+            # initialize info on screen
+            info = [
+                ("FPS", "{:.2f}".format(fps.fps())),
+                ("X-Move", oldxdirection),
+                ("Y-Move", oldydirection)
+            ]
+
+            for (i, (k, v)) in enumerate(info):
+                text = "{}: {}".format(k, v)
+                cv2.putText(frame, text, (10, H - ((i * 20) + 20)),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 2)
 
             # Put Video source in Tkinter format
             image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -438,13 +433,12 @@ def plotgraph():
 
 # starts tracking and prompts user to select the object that they wish to track
 def startTracking():
-    global frame, initBB, tracker, tracking, fps2
+    global frame, initBB, tracker, tracking
     # if the 's' key is selected start tracking
     initBB = cv2.selectROI('Selection', frame, showCrosshair=True)
     cv2.destroyWindow('Selection')
     # start OpenCV object tracker using the supplied bounding box
     tracker.init(frame, initBB)
-    fps2 = FPS().start()
     tracking = True
 
 
