@@ -174,7 +174,7 @@ def sendCommandThread(cmd, serport):
 
 
 fps = FPS().start()
-fps2 = None
+fps2 = 0
 
 
 # main video loop that sets everything and refreshes the screen
