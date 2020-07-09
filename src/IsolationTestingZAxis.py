@@ -313,21 +313,25 @@ def fixBlurMotor():
     sendCommand('S'.encode())
 
     if rightDirection:
+        print("Went In")
         while focus < 300:
             zdirection = 'B'
             sendCommand(zdirection.encode())
             calculateBlur()
-            iterations = iterations + 1
-            if iterations > 30:
-                break
+            sleep(0.25)
+            # iterations = iterations + 1
+            # if iterations > 30:
+            #     break
     else:
+        print("Went In Else")
         while focus < 300:
             zdirection = 'T'
             sendCommand(zdirection.encode())
             calculateBlur()
-            iterations = iterations + 1
-            if iterations > 15:
-                break
+            sleep(0.25)
+            # iterations = iterations + 1
+            # if iterations > 15:
+            #     break
 
     determineFocus()
     zdirection = 'Z'
