@@ -65,6 +65,7 @@ count = 0
 countmax = 10
 
 # Z-Axis
+zdirection = 'N'
 blurry = bool(False)
 rightDirection = bool(False)
 focus = 0
@@ -181,7 +182,7 @@ fps = FPS().start()
 
 # main video loop that sets everything and refreshes the screen
 def videoLoop():
-    global vs, panelB, frame, initBB, x, y, w, h, H, W, centered, fps
+    global vs, panelB, frame, initBB, x, y, w, h, H, W, centered, fps, blurry, zdirection
     try:
         # keep looping over frames until we are instructed to stop
         while not stopEvent.is_set():
@@ -211,8 +212,8 @@ def videoLoop():
             # initialize info on screen
             info = [
                 ("FPS", "{:.2f}".format(fps.fps())),
-                ("X-Move", oldxdirection),
-                ("Y-Move", oldydirection)
+                ("Blurry", "Yes" if blurry else "No"),
+                ("Z-Direction", zdirection)
             ]
 
             for (i, (k, v)) in enumerate(info):
@@ -296,7 +297,7 @@ def determineFocus():
 
 # uses a motor to fix the blur
 def fixBlurMotor():
-    global originalFocus, compareFocus, rightDirection, focus
+    global originalFocus, compareFocus, rightDirection, focus, zdirection
     iterations = 0
     originalFocus = calculateBlur()
     sendCommand('b'.encode())
@@ -308,6 +309,7 @@ def fixBlurMotor():
 
     if rightDirection:
         while focus < 300:
+            zdirection = 'B"'
             sendCommand('b'.encode())
             calculateBlur()
             iterations = iterations + 1
@@ -315,6 +317,7 @@ def fixBlurMotor():
                 break
     else:
         while focus < 300:
+            zdirection = 'T'
             sendCommand('t'.encode())
             calculateBlur()
             iterations = iterations + 1
