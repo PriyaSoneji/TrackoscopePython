@@ -260,7 +260,7 @@ def onClose():
 def makemove():
     global centered
 
-    sendCommand('D'.encode())
+    # sendCommand('D'.encode())
 
     centered = True
 
@@ -319,9 +319,9 @@ def fixBlurMotor():
             sendCommand(zdirection.encode())
             calculateBlur()
             sleep(0.25)
-            # iterations = iterations + 1
-            # if iterations > 30:
-            #     break
+            iterations = iterations + 1
+            if iterations > 15:
+                break
     else:
         print("Went In Else")
         while focus < 300:
@@ -329,9 +329,9 @@ def fixBlurMotor():
             sendCommand(zdirection.encode())
             calculateBlur()
             sleep(0.25)
-            # iterations = iterations + 1
-            # if iterations > 15:
-            #     break
+            iterations = iterations + 1
+            if iterations > 15:
+                break
 
     determineFocus()
     zdirection = 'Z'
