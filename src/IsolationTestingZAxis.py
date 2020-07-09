@@ -166,6 +166,7 @@ initBB = None
 def sendCommand(cmd):
     global portopen, ser1
     if portopen:
+        print("sending")
         ser1.write(cmd)
 
 
@@ -310,7 +311,6 @@ def fixBlurMotor():
             sleep(0.2)
             if calculateBlur() > 100:
                 break
-            print(focus)
     else:
         print("Went In Else")
         for j in range(15):
@@ -319,7 +319,6 @@ def fixBlurMotor():
             sleep(0.2)
             if calculateBlur() > 100:
                 break
-            print(focus)
 
     determineFocus()
     zdirection = 'Z'
