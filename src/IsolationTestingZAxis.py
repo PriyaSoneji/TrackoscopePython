@@ -6,6 +6,7 @@ import imutils
 import threading
 import argparse
 import cv2
+import os
 from time import sleep
 import pyautogui
 import serial.tools.list_ports
@@ -165,17 +166,17 @@ initBB = None
 
 def sendCommand(cmd):
     global portopen, ser1
+    ser1.flush()
     if portopen:
-        thread3 = threading.Thread(target=sendCommandThread, args=(cmd, ser1))
-        thread3.start()
+        ser1.write(cmd)
 
 
-# sends command to the Arduino over serial port
-def sendCommandThread(cmd, serport):
-    serport.flush()
-    serport.write(cmd)
-    if not centered:
-        serport.write(cmd)
+# # sends command to the Arduino over serial port
+# def sendCommandThread(cmd, serport):
+#     serport.flush()
+#     serport.write(cmd)
+#     if not centered:
+#         serport.write(cmd)
 
 
 fps = FPS().start()
@@ -276,7 +277,8 @@ def threadedZAxis():
         # Z-Axis Detection
         determineFocus()
         if blurry:
-            fixBlurMotor()
+            # fixBlurMotor()
+            fixBlurCam()
 
 
 # calculates the blur and returns the blur number
@@ -291,7 +293,7 @@ def calculateBlur():
 # determines if it is in focus or not
 def determineFocus():
     global blurry
-    if calculateBlur() < 30:
+    if calculateBlur() < 80:
         blurry = bool(True)
     else:
         blurry = bool(False)
@@ -316,14 +318,14 @@ def fixBlurMotor():
             zdirection = 'b'
             sendCommand(zdirection.encode())
             sleep(0.1)
-            if calculateBlur() > 30:
+            if calculateBlur() > 80:
                 break
     else:
         for j in range(15):
             zdirection = 't'
             sendCommand(zdirection.encode())
             sleep(0.1)
-            if calculateBlur() > 30:
+            if calculateBlur() > 80:
                 break
 
     determineFocus()
@@ -331,9 +333,49 @@ def fixBlurMotor():
     sendCommand(zdirection.encode())
 
 
+def focusing(val):
+    value = (val << 4) & 0x3ff0
+    data1 = (value >> 8) & 0x3f
+    data2 = value & 0xf0
+    os.system("i2cset -y 0 0x0c %d %d" % (data1, data2))
+
+
 # uses autofocus to fix the blurriness
 def fixBlurCam():
-    global originalFocus, compareFocus, rightDirection
+
+    max_index = 10
+    max_value = 0.0
+    last_value = 0.0
+    dec_count = 0
+    focal_distance = 10
+
+    while True:
+        # Adjust focus
+        focusing(focal_distance)
+        # Take image and calculate image clarity
+        val = calculateBlur()
+        # Find the maximum image clarity
+        if val > max_value:
+            max_index = focal_distance
+            max_value = val
+
+        # If the image clarity starts to decrease
+        if val < last_value:
+            dec_count += 1
+        else:
+            dec_count = 0
+        # Image clarity is reduced by six consecutive frames
+        if dec_count > 6:
+            break
+        last_value = val
+
+        # Increase the focal distance
+        focal_distance += 10
+        if focal_distance > 1000:
+            break
+
+        # Adjust focus to the best
+        focusing(max_index)
 
 
 # sends commands to move in all 6 directions and stop
@@ -368,7 +410,7 @@ def stopMov():
 # plots the graph using matplotlib
 def plotgraph():
     # grab a reference to the image panels
-    global panelA, figure1, ax, root, z_values
+    global panelA, figure1, ax, root, x_values, y_values, z_values
 
     # plot
     ax.plot(x_values, y_values, z_values)
@@ -438,7 +480,6 @@ stopmovButton.grid(row=2, column=3, sticky='WENS')
 thread = threading.Thread(target=videoLoop, args=())
 thread2 = threading.Thread(target=threadedZAxis, args=())
 thread.start()
-
 
 root.wm_title("Trackoscope")
 

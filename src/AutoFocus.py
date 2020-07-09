@@ -86,8 +86,6 @@ if __name__ == "__main__":
     # save image to file.
     camera.capture("test.jpg")
     print("max index = %d,max value = %lf" % (max_index, max_value))
-    # while True:
-    #	time.sleep(1)
 
     camera.stop_preview()
     camera.close()

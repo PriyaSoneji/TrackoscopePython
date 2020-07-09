@@ -8,6 +8,7 @@ import argparse
 import cv2
 from time import sleep
 import pyautogui
+import os
 import serial.tools.list_ports
 import serial
 from imutils.video.pivideostream import PiVideoStream
@@ -72,9 +73,11 @@ compareFocus = 0
 
 x_values = []
 y_values = []
+z_values = []
 
 x_values.append(0)
 y_values.append(0)
+z_values.append(0)
 
 
 # checks for bluriness
@@ -162,8 +165,8 @@ initBB = None
 def sendCommand(cmd):
     global portopen, ser1
     if portopen:
-        thread2 = threading.Thread(target=sendCommandThread, args=(cmd, ser1))
-        thread2.start()
+        thread3 = threading.Thread(target=sendCommandThread, args=(cmd, ser1))
+        thread3.start()
 
 
 # sends command to the Arduino over serial port
@@ -321,20 +324,23 @@ def makemove():
     else:
         centered = False
 
-    # Z-Axis Detection
-    # determineFocus()
-    # if blurry:
-    #     fixBlurMotor()
-
     return centered
 
 
 # figure one data
-df1 = None
 figure1 = plt.Figure(figsize=(5, 4), dpi=100)
-ax = figure1.add_subplot(111)
+ax = figure1.add_subplot(111, projection='3d')
 bar1 = FigureCanvasTkAgg(figure1, root)
 bar1.get_tk_widget().grid(row=0, column=1)
+
+
+def threadedZAxis():
+    while not stopEvent.is_set():
+        # Z-Axis Detection
+        determineFocus()
+        if blurry:
+            fixBlurMotor()
+            # fixBlurCam()
 
 
 # calculates the blur and returns the blur number
@@ -342,14 +348,14 @@ def calculateBlur():
     global focus
     image = vs.read()
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    focus = variance_of_laplacian(gray)
+    focus = round(variance_of_laplacian(gray), 2)
     return focus
 
 
 # determines if it is in focus or not
 def determineFocus():
     global blurry
-    if calculateBlur() < 300:
+    if calculateBlur() < 80:
         blurry = bool(True)
     else:
         blurry = bool(False)
@@ -357,36 +363,80 @@ def determineFocus():
 
 # uses a motor to fix the blur
 def fixBlurMotor():
-    global originalFocus, compareFocus, rightDirection, focus
-    iterations = 0
+    global originalFocus, compareFocus, rightDirection, focus, zdirection
     originalFocus = calculateBlur()
-    sendCommand('b'.encode())
+    zdirection = 'b'
+    sendCommand(zdirection.encode())
     compareFocus = calculateBlur()
     if compareFocus > originalFocus:
         rightDirection = bool(True)
     else:
         rightDirection = bool(False)
 
+    # sendCommand('S'.encode())
+
     if rightDirection:
-        while focus < 300:
-            sendCommand('b'.encode())
-            calculateBlur()
-            iterations = iterations + 1
-            if iterations > 15:
+        for j in range(15):
+            zdirection = 'b'
+            sendCommand(zdirection.encode())
+            sleep(0.1)
+            if calculateBlur() > 80:
                 break
     else:
-        while focus < 300:
-            sendCommand('t'.encode())
-            calculateBlur()
-            iterations = iterations + 1
-            if iterations > 15:
+        for j in range(15):
+            zdirection = 't'
+            sendCommand(zdirection.encode())
+            sleep(0.1)
+            if calculateBlur() > 80:
                 break
+
     determineFocus()
+    zdirection = 'Z'
+    sendCommand(zdirection.encode())
+
+
+def focusing(val):
+    value = (val << 4) & 0x3ff0
+    data1 = (value >> 8) & 0x3f
+    data2 = value & 0xf0
+    os.system("i2cset -y 0 0x0c %d %d" % (data1, data2))
 
 
 # uses autofocus to fix the blurriness
 def fixBlurCam():
-    global originalFocus, compareFocus, rightDirection
+    max_index = 10
+    max_value = 0.0
+    last_value = 0.0
+    dec_count = 0
+    focal_distance = 10
+
+    while True:
+        # Adjust focus
+        focusing(focal_distance)
+        # Take image and calculate image clarity
+        val = calculateBlur()
+        # Find the maximum image clarity
+        if val > max_value:
+            max_index = focal_distance
+            max_value = val
+
+        # If the image clarity starts to decrease
+        if val < last_value:
+            dec_count += 1
+        else:
+            dec_count = 0
+        # Image clarity is reduced by six consecutive frames
+        if dec_count > 6:
+            break
+        last_value = val
+
+        # Increase the focal distance
+        focal_distance += 10
+        if focal_distance > 1000:
+            break
+
+        # Adjust focus to the best
+        focusing(max_index)
 
 
 # sends commands to move in all 6 directions and stop
@@ -421,24 +471,28 @@ def stopMov():
 # plots the graph using matplotlib
 def plotgraph():
     # grab a reference to the image panels
-    global panelA, df1, figure1, ax, root
-    # data for the plot
-    df1 = DataFrame({'X-Movement': x_values,
-                     'Y-Movement': y_values})
-    df1.plot(kind='line', legend=False, ax=ax, grid=True, x='X-Movement', y='Y-Movement', title="Protist Trajectory")
-    df1.plot(kind='scatter', legend=False, ax=ax, grid=True, x='X-Movement', y='Y-Movement', title="Protist Trajectory")
-    # root.update()
+    global panelA, figure1, ax, root, x_values, y_values, z_values
+
+    # plot
+    ax.plot(x_values, y_values, z_values)
+    ax.scatter(x_values, y_values, z_values)
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
+
+    # idle draw
     bar1.draw_idle()
 
 
 # starts tracking and prompts user to select the object that they wish to track
 def startTracking():
-    global frame, initBB, tracker, tracking
+    global frame, initBB, tracker, tracking, thread2
     # if the 's' key is selected start tracking
     initBB = cv2.selectROI('Selection', frame, showCrosshair=True)
     cv2.destroyWindow('Selection')
     # start OpenCV object tracker using the supplied bounding box
     tracker.init(frame, initBB)
+    thread2.start()
     tracking = True
 
 
@@ -484,6 +538,7 @@ stopmovButton.grid(row=2, column=3, sticky='WENS')
 
 # start videoloop thread
 thread = threading.Thread(target=videoLoop, args=())
+thread2 = threading.Thread(target=threadedZAxis, args=())
 thread.start()
 
 root.wm_title("Trackoscope")
