@@ -300,25 +300,28 @@ def fixBlurMotor():
     global originalFocus, compareFocus, rightDirection, focus, zdirection
     iterations = 0
     originalFocus = calculateBlur()
-    sendCommand('b'.encode())
+    zdirection = 'B'
+    sendCommand(zdirection.encode())
     compareFocus = calculateBlur()
     if compareFocus > originalFocus:
         rightDirection = bool(True)
     else:
         rightDirection = bool(False)
 
+    sendCommand('S'.encode())
+
     if rightDirection:
         while focus < 300:
-            zdirection = 'B"'
-            sendCommand('b'.encode())
+            zdirection = 'b'
+            sendCommand(zdirection.encode())
             calculateBlur()
             iterations = iterations + 1
-            if iterations > 15:
+            if iterations > 30:
                 break
     else:
         while focus < 300:
-            zdirection = 'T'
-            sendCommand('t'.encode())
+            zdirection = 't'
+            sendCommand(zdirection.encode())
             calculateBlur()
             iterations = iterations + 1
             if iterations > 15:
