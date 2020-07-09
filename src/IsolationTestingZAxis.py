@@ -172,6 +172,7 @@ def sendCommand(cmd):
 
 # sends command to the Arduino over serial port
 def sendCommandThread(cmd, serport):
+    serport.flush()
     serport.write(cmd)
     if not centered:
         serport.write(cmd)
@@ -283,7 +284,7 @@ def calculateBlur():
     global focus
     image = vs.read()
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    focus = variance_of_laplacian(gray)
+    focus = round(variance_of_laplacian(gray), 2)
     return focus
 
 
