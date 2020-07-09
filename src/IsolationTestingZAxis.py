@@ -166,7 +166,6 @@ initBB = None
 def sendCommand(cmd):
     global portopen, ser1
     if portopen:
-        print("sending")
         ser1.write(cmd)
 
 
@@ -253,14 +252,7 @@ def makemove():
     global centered
 
     # sendCommand('D'.encode())
-
     centered = True
-
-    # Z-Axis Detection
-    determineFocus()
-    if blurry:
-        fixBlurMotor()
-
     return centered
 
 
@@ -269,6 +261,14 @@ figure1 = plt.Figure(figsize=(5, 4), dpi=100)
 ax = figure1.add_subplot(111, projection='3d')
 bar1 = FigureCanvasTkAgg(figure1, root)
 bar1.get_tk_widget().grid(row=0, column=1)
+
+
+def threadedZAxis():
+    while not stopEvent.is_set():
+        # Z-Axis Detection
+        determineFocus()
+        if blurry:
+            fixBlurMotor()
 
 
 # calculates the blur and returns the blur number
@@ -283,7 +283,7 @@ def calculateBlur():
 # determines if it is in focus or not
 def determineFocus():
     global blurry
-    if calculateBlur() < 100:
+    if calculateBlur() < 50:
         blurry = bool(True)
     else:
         blurry = bool(False)
@@ -309,7 +309,7 @@ def fixBlurMotor():
             zdirection = 'b'
             sendCommand(zdirection.encode())
             sleep(0.2)
-            if calculateBlur() > 100:
+            if calculateBlur() > 50:
                 break
     else:
         print("Went In Else")
@@ -317,7 +317,7 @@ def fixBlurMotor():
             zdirection = 't'
             sendCommand(zdirection.encode())
             sleep(0.2)
-            if calculateBlur() > 100:
+            if calculateBlur() > 50:
                 break
 
     determineFocus()
@@ -377,12 +377,14 @@ def plotgraph():
 
 # starts tracking and prompts user to select the object that they wish to track
 def startTracking():
-    global frame, initBB, tracker, tracking, ser1
-    # if the 's' key is selected start tracking
+    global frame, initBB, tracker, tracking, ser1, thread2
+
     initBB = cv2.selectROI('Selection', frame, showCrosshair=True)
     cv2.destroyWindow('Selection')
+
     # start OpenCV object tracker using the supplied bounding box
     tracker.init(frame, initBB)
+    thread2.start()
     tracking = True
 
 
@@ -428,7 +430,9 @@ stopmovButton.grid(row=2, column=3, sticky='WENS')
 
 # start videoloop thread
 thread = threading.Thread(target=videoLoop, args=())
+thread2 = threading.Thread(target=threadedZAxis, args=())
 thread.start()
+
 
 root.wm_title("Trackoscope")
 
