@@ -166,7 +166,15 @@ initBB = None
 def sendCommand(cmd):
     global portopen, ser1
     if portopen:
-        ser1.write(cmd)
+        thread3 = threading.Thread(target=sendCommandThread, args=(cmd, ser1))
+        thread3.start()
+
+
+# sends command to the Arduino over serial port
+def sendCommandThread(cmd, serport):
+    serport.write(cmd)
+    if not centered:
+        serport.write(cmd)
 
 
 fps = FPS().start()
@@ -204,7 +212,7 @@ def videoLoop():
             # initialize info on screen
             info = [
                 ("FPS", "{:.2f}".format(fps.fps())),
-                ("Blurry", "Yes" if blurry else "No")
+                ("Blurry", calculateBlur())
             ]
 
             for (i, (k, v)) in enumerate(info):
@@ -251,7 +259,6 @@ def onClose():
 def makemove():
     global centered
 
-    # sendCommand('D'.encode())
     centered = True
     return centered
 
@@ -283,7 +290,7 @@ def calculateBlur():
 # determines if it is in focus or not
 def determineFocus():
     global blurry
-    if calculateBlur() < 50:
+    if calculateBlur() < 30:
         blurry = bool(True)
     else:
         blurry = bool(False)
@@ -304,20 +311,18 @@ def fixBlurMotor():
     # sendCommand('S'.encode())
 
     if rightDirection:
-        print("Went In")
         for j in range(15):
             zdirection = 'b'
             sendCommand(zdirection.encode())
-            sleep(0.2)
-            if calculateBlur() > 50:
+            sleep(0.1)
+            if calculateBlur() > 30:
                 break
     else:
-        print("Went In Else")
         for j in range(15):
             zdirection = 't'
             sendCommand(zdirection.encode())
-            sleep(0.2)
-            if calculateBlur() > 50:
+            sleep(0.1)
+            if calculateBlur() > 30:
                 break
 
     determineFocus()
