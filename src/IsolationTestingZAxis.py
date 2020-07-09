@@ -260,6 +260,8 @@ def onClose():
 def makemove():
     global centered
 
+    sendCommand('D'.encode())
+
     centered = True
 
     # Z-Axis Detection
@@ -312,7 +314,7 @@ def fixBlurMotor():
 
     if rightDirection:
         while focus < 300:
-            zdirection = 'b'
+            zdirection = 'B'
             sendCommand(zdirection.encode())
             calculateBlur()
             iterations = iterations + 1
@@ -320,13 +322,16 @@ def fixBlurMotor():
                 break
     else:
         while focus < 300:
-            zdirection = 't'
+            zdirection = 'T'
             sendCommand(zdirection.encode())
             calculateBlur()
             iterations = iterations + 1
             if iterations > 15:
                 break
+
     determineFocus()
+    zdirection = 'Z'
+    sendCommand(zdirection.encode())
 
 
 # uses autofocus to fix the blurriness
@@ -381,13 +386,14 @@ def plotgraph():
 
 # starts tracking and prompts user to select the object that they wish to track
 def startTracking():
-    global frame, initBB, tracker, tracking
+    global frame, initBB, tracker, tracking, ser1
     # if the 's' key is selected start tracking
     initBB = cv2.selectROI('Selection', frame, showCrosshair=True)
     cv2.destroyWindow('Selection')
     # start OpenCV object tracker using the supplied bounding box
     tracker.init(frame, initBB)
     tracking = True
+    ser1.flush()
 
 
 # define the buttons and their commands
