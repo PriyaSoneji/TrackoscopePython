@@ -465,7 +465,8 @@ def zNeg():
 
 
 def stopMov():
-    sendCommand('S'.encode())
+    sendCommand('X'.encode())
+    sendCommand('Y'.encode())
 
 
 # plots the graph using matplotlib
