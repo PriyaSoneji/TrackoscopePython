@@ -212,8 +212,7 @@ def videoLoop():
             # initialize info on screen
             info = [
                 ("FPS", "{:.2f}".format(fps.fps())),
-                ("Blurry", "Yes" if blurry else "No"),
-                ("Z-Direction", zdirection)
+                ("Blurry", "Yes" if blurry else "No")
             ]
 
             for (i, (k, v)) in enumerate(info):
@@ -300,7 +299,6 @@ def determineFocus():
 # uses a motor to fix the blur
 def fixBlurMotor():
     global originalFocus, compareFocus, rightDirection, focus, zdirection
-    iterations = 0
     originalFocus = calculateBlur()
     zdirection = 'B'
     sendCommand(zdirection.encode())
@@ -314,24 +312,22 @@ def fixBlurMotor():
 
     if rightDirection:
         print("Went In")
-        while focus < 300:
+        for j in range(15):
             zdirection = 'B'
             sendCommand(zdirection.encode())
-            calculateBlur()
-            sleep(0.25)
-            iterations = iterations + 1
-            if iterations > 15:
+            sleep(0.2)
+            if calculateBlur() > 300:
                 break
+            print(focus)
     else:
         print("Went In Else")
-        while focus < 300:
+        for j in range(15):
             zdirection = 'T'
             sendCommand(zdirection.encode())
-            calculateBlur()
-            sleep(0.25)
-            iterations = iterations + 1
-            if iterations > 15:
+            sleep(0.2)
+            if calculateBlur() > 300:
                 break
+            print(focus)
 
     determineFocus()
     zdirection = 'Z'
@@ -397,7 +393,6 @@ def startTracking():
     # start OpenCV object tracker using the supplied bounding box
     tracker.init(frame, initBB)
     tracking = True
-    ser1.flush()
 
 
 # define the buttons and their commands
