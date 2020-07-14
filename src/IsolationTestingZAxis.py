@@ -164,19 +164,25 @@ else:
 initBB = None
 
 
+# def sendCommand(cmd):
+#     global portopen, ser1
+#     ser1.flush()
+#     if portopen:
+#         ser1.write(cmd)
+
+
 def sendCommand(cmd):
     global portopen, ser1
-    ser1.flush()
     if portopen:
-        ser1.write(cmd)
+        thread3 = threading.Thread(target=sendCommandThread, args=(cmd, ser1))
+        thread3.start()
 
 
-# # sends command to the Arduino over serial port
-# def sendCommandThread(cmd, serport):
-#     serport.flush()
-#     serport.write(cmd)
-#     if not centered:
-#         serport.write(cmd)
+# sends command to the Arduino over serial port
+def sendCommandThread(cmd, serport):
+    serport.write(cmd)
+    if not centered:
+        serport.write(cmd)
 
 
 fps = FPS().start()
@@ -277,8 +283,8 @@ def threadedZAxis():
         # Z-Axis Detection
         determineFocus()
         if blurry:
-            # fixBlurMotor()
-            fixBlurCam()
+            fixBlurMotor()
+            # fixBlurCam()
 
 
 # calculates the blur and returns the blur number

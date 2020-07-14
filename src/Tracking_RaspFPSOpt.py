@@ -65,6 +65,7 @@ count = 0
 countmax = 10
 
 # Z-Axis
+zdirection = 'N'
 blurry = bool(False)
 rightDirection = bool(False)
 focus = 0
@@ -465,8 +466,7 @@ def zNeg():
 
 
 def stopMov():
-    sendCommand('X'.encode())
-    sendCommand('Y'.encode())
+    sendCommand('S'.encode())
 
 
 # plots the graph using matplotlib
