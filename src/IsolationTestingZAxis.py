@@ -432,7 +432,7 @@ def plotgraph():
 
 # starts tracking and prompts user to select the object that they wish to track
 def startTracking():
-    global frame, initBB, tracker, tracking, ser1, thread2
+    global frame, initBB, tracker, tracking, ser1, thread2, portopen
 
     initBB = cv2.selectROI('Selection', frame, showCrosshair=True)
     cv2.destroyWindow('Selection')
@@ -440,8 +440,11 @@ def startTracking():
     # start OpenCV object tracker using the supplied bounding box
     tracker.init(frame, initBB)
     thread2.start()
+    ser1.close()
+    ser1 = serial.Serial('/dev/ttyACM0', 115200)
     ser1.flush()
-    sleep(1.5)
+    sleep(2)
+    portopen = True
     tracking = True
 
 
