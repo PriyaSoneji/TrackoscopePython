@@ -311,6 +311,7 @@ def fixBlurMotor():
     originalFocus = calculateBlur()
     zdirection = 'b'
     sendCommand(zdirection.encode())
+    # print(ser1.read())
     compareFocus = calculateBlur()
     if compareFocus > originalFocus:
         rightDirection = bool(True)
@@ -439,6 +440,8 @@ def startTracking():
     # start OpenCV object tracker using the supplied bounding box
     tracker.init(frame, initBB)
     thread2.start()
+    ser1.flush()
+    sleep(1.5)
     tracking = True
 
 
