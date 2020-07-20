@@ -7,9 +7,11 @@ import threading
 import argparse
 import cv2
 from time import sleep
+import pyautogui
+import os
 import serial.tools.list_ports
 import serial
-from imutils.video import VideoStream
+from imutils.video.pivideostream import PiVideoStream
 from imutils.video import FPS
 from pandas import DataFrame
 import matplotlib.pyplot as plt
@@ -44,23 +46,17 @@ centery = 0
 # flipping variables
 portopen = bool(False)
 horizder = bool(False)
-vertder = bool(False)
+vertder = bool(True)
 rotate = bool(False)
 sendrepeat = bool(False)
 centered = bool(False)
-cameramode = bool(True)
 tracking = bool(False)
 
 # range limits
-xrangehl = 55
-xrangell = 45
-yrangehl = 55
-yrangell = 45
-xrangehs = 60
-xrangels = 40
-yrangehs = 60
-yrangels = 40
-availvid = []
+xrangehl = 65
+xrangell = 35
+yrangehl = 65
+yrangell = 35
 
 # graphing stuff
 currx = 0
@@ -69,6 +65,7 @@ count = 0
 countmax = 10
 
 # Z-Axis
+zdirection = 'N'
 blurry = bool(False)
 rightDirection = bool(False)
 focus = 0
@@ -77,9 +74,18 @@ compareFocus = 0
 
 x_values = []
 y_values = []
+z_values = []
 
 x_values.append(0)
 y_values.append(0)
+z_values.append(0)
+
+
+# checks for bluriness
+def variance_of_laplacian(image):
+    # compute the Laplacian of the image and then return the focus
+    # measure, which is simply the variance of the Laplacian
+    return cv2.Laplacian(image, cv2.CV_64F).var()
 
 
 # button press commands
@@ -88,30 +94,18 @@ def swapHorizontal():
     horizder = not horizder
 
 
-def variance_of_laplacian(image):
-    # compute the Laplacian of the image and then return the focus
-    # measure, which is simply the variance of the Laplacian
-    return cv2.Laplacian(image, cv2.CV_64F).var()
-
-
 def swapVertical():
     global vertder
     vertder = not vertder
-
-
-def swapMode():
-    global cameramode
-    cameramode = not cameramode
 
 
 def savePlot():
     figure1.savefig('output.png')
 
 
-def home():
-    if cameramode:
-        if currx > 0 and currx > 70:
-            print("moving back")
+def screenshot():
+    myScreenshot = pyautogui.screenshot()
+    myScreenshot.save(r'capture.png')
 
 
 # initialize the window toolkit along with the two image panels
@@ -120,7 +114,6 @@ panelA = None
 panelB = None
 frame = None
 thread = None
-stopEvent = None
 stopEvent = threading.Event()
 
 
@@ -130,34 +123,18 @@ def addpoint():
     if count == countmax:
         x_values.append(currx)
         y_values.append(curry)
-        # plotgraph()
         count = 0
     count = count + 1
 
 
-# check for available serial ports
-def serial_ports():
-    # List serial ports
-    comlist = serial.tools.list_ports.comports()
-    connected = []
-    for element in comlist:
-        connected.append(element.device)
-    print("Connected COM ports: " + str(connected))
-    return connected
-
-
 # open Arduino Serial
-availableport = serial_ports()
-if len(availableport) > 0:
-    # ser1 = serial.Serial (availableport[0], 115200)
-    ser1 = serial.Serial('/dev/ttyACM0', 115200)
-    sleep(2)
-    portopen = True
+ser1 = serial.Serial('/dev/ttyACM0', 115200)
+ser1.flush()
+sleep(2)
+portopen = True
 
 # construct the argument parser for opencv and parse the arguments
 ap = argparse.ArgumentParser()
-ap.add_argument("-v", "--video", type=str,
-                help="path to input video file")
 ap.add_argument("-t", "--tracker", type=str, default="csrt",
                 help="OpenCV object tracker type")
 args = vars(ap.parse_args())
@@ -186,17 +163,24 @@ else:
 initBB = None
 
 
-# sends command to the Arduino over serial port
 def sendCommand(cmd):
+    global portopen, ser1
     if portopen:
-        ser1.write(cmd)
-        # if not centered:
-        #     ser1.write(cmd)
+        thread3 = threading.Thread(target=sendCommandThread, args=(cmd, ser1))
+        thread3.start()
 
 
-fps = None
+# sends command to the Arduino over serial port
+def sendCommandThread(cmd, serport):
+    serport.write(cmd)
+    if not centered:
+        serport.write(cmd)
 
 
+fps = FPS().start()
+
+
+# main video loop that sets everything and refreshes the screen
 def videoLoop():
     global vs, panelB, frame, initBB, x, y, w, h, H, W, centered, fps
     try:
@@ -205,34 +189,37 @@ def videoLoop():
             # grab the frame from the video stream and resize it to
             # have a maximum width of 300 pixels
             frame = vs.read()
-            frame = imutils.resize(frame, width=600)
+            frame = imutils.resize(frame, width=400)
             (H, W) = frame.shape[:2]
+
             # check to see if we are currently tracking an object
             if initBB is not None:
                 # grab the new bounding box coordinates of the object
                 (success, box) = tracker.update(frame)
                 if success:
                     (x, y, w, h) = [int(v) for v in box]
-                    cv2.rectangle(frame, (x, y), (x + w, y + h),
-                                  (0, 255, 0), 2)
                     centered = makemove()
+                    if centered:
+                        cv2.rectangle(frame, (x, y), (x + w, y + h),
+                                      (0, 255, 0), 2)
+                    else:
+                        cv2.rectangle(frame, (x, y), (x + w, y + h),
+                                      (0, 0, 255), 2)
 
-                fps.update()
-                fps.stop()
+            fps.update()
+            fps.stop()
 
-                # initialize info on screen
-                info = [
-                    ("FPS", "{:.2f}".format(fps.fps())),
-                    ("X-Move", oldxdirection),
-                    ("Y-Move", oldydirection),
-                    ("In Center", "Yes" if centered else "No"),
-                    ("Blur", "Yes" if blurry else "No")
-                ]
+            # initialize info on screen
+            info = [
+                ("FPS", "{:.2f}".format(fps.fps())),
+                ("X-Move", oldxdirection),
+                ("Y-Move", oldydirection)
+            ]
 
-                for (i, (k, v)) in enumerate(info):
-                    text = "{}: {}".format(k, v)
-                    cv2.putText(frame, text, (10, H - ((i * 20) + 20)),
-                                cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+            for (i, (k, v)) in enumerate(info):
+                text = "{}: {}".format(k, v)
+                cv2.putText(frame, text, (10, H - ((i * 20) + 20)),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 2)
 
             # Put Video source in Tkinter format
             image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -254,6 +241,7 @@ def videoLoop():
         print("[INFO] caught a RuntimeError")
 
 
+# shuts everything down when window closed
 def onClose():
     # set the stop event, cleanup the camera, and allow the rest of
     # the quit process to continue
@@ -279,185 +267,180 @@ def makemove():
     largey = y + h
     centery = (smally + largey) / 2
 
-    # large movements
-    if cameramode:
-        # Send X direction
-        if ((centerx / W) * 100) > xrangehl:
-            if horizder:
-                newxdirection = 'L'
-                currx = currx - 1
-                addpoint()
-            else:
-                newxdirection = 'R'
-                currx = currx + 1
-                addpoint()
-        elif ((centerx / W) * 100) < xrangell:
-            if horizder:
-                newxdirection = 'R'
-                currx = currx + 1
-                addpoint()
-            else:
-                newxdirection = 'L'
-                currx = currx - 1
-                addpoint()
+    # Send X direction
+    if ((centerx / W) * 100) > xrangehl:
+        if horizder:
+            newxdirection = 'L'
+            currx = currx - 1
+            addpoint()
         else:
-            newxdirection = 'X'
-        if (oldxdirection != newxdirection) or sendrepeat:
-            sendCommand(newxdirection.encode())
-            oldxdirection = newxdirection
-
-        # Send Y direction
-        if ((centery / H) * 100) > yrangehl:
-            if vertder:
-                newydirection = 'D'
-                curry = curry + 1
-                addpoint()
-            else:
-                newydirection = 'U'
-                curry = curry - 1
-                addpoint()
-        elif ((centery / H) * 100) < yrangell:
-            if vertder:
-                newydirection = 'U'
-                curry = curry - 1
-                addpoint()
-            else:
-                newydirection = 'D'
-                curry = curry + 1
-                addpoint()
+            newxdirection = 'R'
+            currx = currx + 1
+            addpoint()
+    elif ((centerx / W) * 100) < xrangell:
+        if horizder:
+            newxdirection = 'R'
+            currx = currx + 1
+            addpoint()
         else:
-            newydirection = 'Y'
-        if (oldydirection != newydirection) or sendrepeat:
-            sendCommand(newydirection.encode())
-            oldydirection = newydirection
+            newxdirection = 'L'
+            currx = currx - 1
+            addpoint()
+    else:
+        newxdirection = 'X'
 
-    # small movements
-    if not cameramode:
-        # Send X direction
-        if ((centerx / W) * 100) > xrangehs:
-            if horizder:
-                xdirection = 'l'
-                currx = currx + 1
-                addpoint()
+    if oldxdirection != newxdirection:
+        sendCommand(newxdirection.encode())
+        # ser1.flush()
+        oldxdirection = newxdirection
 
-            else:
-                xdirection = 'r'
-                currx = currx - 1
-                addpoint()
-
-        elif ((centerx / W) * 100) < xrangels:
-            if horizder:
-                xdirection = 'r'
-                currx = currx - 1
-                addpoint()
-
-            else:
-                xdirection = 'l'
-                currx = currx + 1
-                addpoint()
-
+    # Send Y direction
+    if ((centery / H) * 100) > yrangehl:
+        if vertder:
+            newydirection = 'D'
+            curry = curry + 1
+            addpoint()
         else:
-            xdirection = 'x'
-        if (xdirection != 'x') or sendrepeat:
-            sendCommand(xdirection.encode())
-        # Send Y direction
-        if ((centery / H) * 100) > yrangehs:
-            if vertder:
-                ydirection = 'd'
-                curry = curry + 1
-                addpoint()
-
-            else:
-                ydirection = 'u'
-                curry = curry - 1
-                addpoint()
-
-        elif ((centery / H) * 100) < yrangels:
-            if vertder:
-                ydirection = 'u'
-                curry = curry - 1
-                addpoint()
-
-            else:
-                ydirection = 'd'
-                curry = curry + 1
-                addpoint()
-
+            newydirection = 'U'
+            curry = curry - 1
+            addpoint()
+    elif ((centery / H) * 100) < yrangell:
+        if vertder:
+            newydirection = 'U'
+            curry = curry - 1
+            addpoint()
         else:
-            ydirection = 'y'
+            newydirection = 'D'
+            curry = curry + 1
+            addpoint()
+    else:
+        newydirection = 'Y'
+    if oldydirection != newydirection:
+        sendCommand(newydirection.encode())
+        # ser1.flush()
+        oldydirection = newydirection
 
-        if (ydirection != 'y') or sendrepeat:
-            sendCommand(ydirection.encode())
-
-    if ((newydirection == 'Y') and (newxdirection == 'X')) or ((ydirection == 'y') and (xdirection == 'x')):
+    if (newydirection == 'Y') and (newxdirection == 'X'):
         centered = True
     else:
         centered = False
-
-    # Z-Axis Detection
-    determineFocus()
-    if blurry:
-        fixBlurMotor()
 
     return centered
 
 
 # figure one data
-df1 = None
-figure1 = plt.Figure(figsize=(6, 5), dpi=100)
-ax = figure1.add_subplot(111)
+figure1 = plt.Figure(figsize=(5, 4), dpi=100)
+ax = figure1.add_subplot(111, projection='3d')
 bar1 = FigureCanvasTkAgg(figure1, root)
 bar1.get_tk_widget().grid(row=0, column=1)
 
 
+def threadedZAxis():
+    while not stopEvent.is_set():
+        # Z-Axis Detection
+        determineFocus()
+        if blurry:
+            fixBlurMotor()
+            # fixBlurCam()
+
+
+# calculates the blur and returns the blur number
 def calculateBlur():
     global focus
     image = vs.read()
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    focus = variance_of_laplacian(gray)
+    focus = round(variance_of_laplacian(gray), 2)
     return focus
 
 
+# determines if it is in focus or not
 def determineFocus():
     global blurry
-    if calculateBlur() < 300:
+    if calculateBlur() < 80:
         blurry = bool(True)
     else:
         blurry = bool(False)
 
 
+# uses a motor to fix the blur
 def fixBlurMotor():
-    global originalFocus, compareFocus, rightDirection, focus
-    iterations = 0
+    global originalFocus, compareFocus, rightDirection, focus, zdirection
     originalFocus = calculateBlur()
-    sendCommand('b'.encode())
+    zdirection = 'b'
+    sendCommand(zdirection.encode())
     compareFocus = calculateBlur()
     if compareFocus > originalFocus:
         rightDirection = bool(True)
     else:
         rightDirection = bool(False)
 
+    # sendCommand('S'.encode())
+
     if rightDirection:
-        while focus < 300:
-            sendCommand('b'.encode())
-            calculateBlur()
-            iterations = iterations + 1
-            if iterations > 15:
+        for j in range(15):
+            zdirection = 'b'
+            sendCommand(zdirection.encode())
+            sleep(0.1)
+            if calculateBlur() > 80:
                 break
     else:
-        while focus < 300:
-            sendCommand('t'.encode())
-            calculateBlur()
-            iterations = iterations + 1
-            if iterations > 15:
+        for j in range(15):
+            zdirection = 't'
+            sendCommand(zdirection.encode())
+            sleep(0.1)
+            if calculateBlur() > 80:
                 break
+
     determineFocus()
+    zdirection = 'Z'
+    sendCommand(zdirection.encode())
 
 
+def focusing(val):
+    value = (val << 4) & 0x3ff0
+    data1 = (value >> 8) & 0x3f
+    data2 = value & 0xf0
+    os.system("i2cset -y 0 0x0c %d %d" % (data1, data2))
+
+
+# uses autofocus to fix the blurriness
 def fixBlurCam():
-    global originalFocus, compareFocus, rightDirection
+    max_index = 10
+    max_value = 0.0
+    last_value = 0.0
+    dec_count = 0
+    focal_distance = 10
+
+    while True:
+        # Adjust focus
+        focusing(focal_distance)
+        # Take image and calculate image clarity
+        val = calculateBlur()
+        # Find the maximum image clarity
+        if val > max_value:
+            max_index = focal_distance
+            max_value = val
+
+        # If the image clarity starts to decrease
+        if val < last_value:
+            dec_count += 1
+        else:
+            dec_count = 0
+        # Image clarity is reduced by six consecutive frames
+        if dec_count > 6:
+            break
+        last_value = val
+
+        # Increase the focal distance
+        focal_distance += 10
+        if focal_distance > 1000:
+            break
+
+        # Adjust focus to the best
+        focusing(max_index)
 
 
+# sends commands to move in all 6 directions and stop
 def yPos():
     sendCommand('U'.encode())
 
@@ -486,37 +469,44 @@ def stopMov():
     sendCommand('S'.encode())
 
 
+# plots the graph using matplotlib
 def plotgraph():
     # grab a reference to the image panels
-    global panelA, df1, figure1, ax, root
-    # data for the plot
-    df1 = DataFrame({'X-Movement': x_values,
-                     'Y-Movement': y_values})
-    df1.plot(kind='line', legend=False, ax=ax, grid=True, x='X-Movement', y='Y-Movement', title="Protist Trajectory")
-    df1.plot(kind='scatter', legend=False, ax=ax, grid=True, x='X-Movement', y='Y-Movement', title="Protist Trajectory")
-    # root.update()
+    global panelA, figure1, ax, root, x_values, y_values, z_values
+
+    # plot
+    ax.plot(x_values, y_values, z_values)
+    ax.scatter(x_values, y_values, z_values)
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
+
+    # idle draw
     bar1.draw_idle()
 
 
+# starts tracking and prompts user to select the object that they wish to track
 def startTracking():
-    global frame, initBB, tracker, tracking, fps
+    global frame, initBB, tracker, tracking, thread2
     # if the 's' key is selected start tracking
     initBB = cv2.selectROI('Selection', frame, showCrosshair=True)
     cv2.destroyWindow('Selection')
     # start OpenCV object tracker using the supplied bounding box
     tracker.init(frame, initBB)
-    fps = FPS().start()
+    thread2.start()
     tracking = True
 
 
+# define the buttons and their commands
 startButton = Button(root, text="Start Tracking", command=startTracking, activebackground='yellow')
 plotButton = Button(root, text="Plot Graph", command=plotgraph, activebackground='yellow')
 hFlipButton = Button(root, text="Flip HorizDir", command=swapHorizontal, activebackground='yellow')
 vFlipButton = Button(root, text="Flip VertDir", command=swapVertical, activebackground='yellow')
-modeButton = Button(root, text="Change Mode", command=swapMode, activebackground='yellow')
+screenButton = Button(root, text="Screenshot", command=screenshot, activebackground='yellow')
 stopButton = Button(root, text="Quit", command=onClose, activebackground='yellow')
 saveButton = Button(root, text="Save Plot", command=savePlot, activebackground='yellow')
 homeButton = Button(root, text="Check Blur", command=calculateBlur, activebackground='yellow')
+# buttons to control the movement
 yposButton = Button(root, text="Y+", command=yPos, activebackground='yellow')
 ynegButton = Button(root, text="Y-", command=yNeg, activebackground='yellow')
 xposButton = Button(root, text="X+", command=xPos, activebackground='yellow')
@@ -527,15 +517,15 @@ stopmovButton = Button(root, text="S", command=stopMov, activebackground='yellow
 
 # start video stream
 print("[INFO] starting video stream...")
-vs = VideoStream(src=0).start()
+vs = PiVideoStream().start()
 sleep(1.0)
 
-
+# place the buttons
 startButton.grid(row=1, column=0, sticky='WENS')
 plotButton.grid(row=1, column=1, sticky='WENS')
 hFlipButton.grid(row=2, column=0, sticky='WENS')
 vFlipButton.grid(row=2, column=1, sticky='WENS')
-modeButton.grid(row=3, column=0, sticky='WENS')
+screenButton.grid(row=3, column=0, sticky='WENS')
 stopButton.grid(row=3, column=1, sticky='WENS')
 saveButton.grid(row=4, column=0, sticky='WENS')
 homeButton.grid(row=4, column=1, sticky='WENS')
@@ -547,7 +537,9 @@ zposButton.grid(row=4, column=4, sticky='WENS')
 znegButton.grid(row=4, column=2, sticky='WENS')
 stopmovButton.grid(row=2, column=3, sticky='WENS')
 
+# start videoloop thread
 thread = threading.Thread(target=videoLoop, args=())
+thread2 = threading.Thread(target=threadedZAxis, args=())
 thread.start()
 
 root.wm_title("Trackoscope")

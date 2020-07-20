@@ -321,6 +321,7 @@ def fixBlurMotor():
     # sendCommand('S'.encode())
 
     if rightDirection:
+        print("went in b")
         for j in range(15):
             zdirection = 'b'
             sendCommand(zdirection.encode())
@@ -328,6 +329,7 @@ def fixBlurMotor():
             if calculateBlur() > 80:
                 break
     else:
+        print("went in t")
         for j in range(15):
             zdirection = 't'
             sendCommand(zdirection.encode())
