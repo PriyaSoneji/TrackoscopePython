@@ -16,6 +16,14 @@ from pandas import DataFrame
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
+try:
+    from control.DaSiamRPN.code.net import SiamRPNvot
+    from control.DaSiamRPN.code import vot
+    from control.DaSiamRPN.code.run_SiamRPN import SiamRPN_init, SiamRPN_track
+    from control.DaSiamRPN.code.utils import get_axis_aligned_bbox, cxy_wh_2_rect
+except ImportError:
+    print('Warning: DaSiamRPN is not available!')
+
 # define tracking variables
 x = 0
 y = 0
@@ -78,7 +86,6 @@ z_values = []
 x_values.append(0)
 y_values.append(0)
 z_values.append(0)
-
 
 availvid = []
 
@@ -195,6 +202,8 @@ else:
         "mosse": cv2.TrackerMOSSE_create
     }
 
+    NEURALNETTRACKERS = {"daSiamRPN": []}
+
     # OpenCV object tracker objects
     tracker = OPENCV_OBJECT_TRACKERS[args["tracker"]]()
 
@@ -241,6 +250,16 @@ def videoLoop():
             if initBB is not None:
                 # grab the new bounding box coordinates of the object
                 (success, box) = tracker.update(frame)
+                state = SiamRPN_track(state, frame)
+
+                success = True
+
+                if (success):
+                    # (x,y,w,h)
+                    box = cxy_wh_2_rect(state['target_pos'], state['target_sz'])
+
+                    box = [int(l) for l in box]
+
                 if success:
                     (x, y, w, h) = [int(v) for v in box]
                     centered = makemove()
