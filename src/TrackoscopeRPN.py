@@ -10,6 +10,8 @@ from time import sleep
 import serial
 import pyautogui
 import glob
+import torch
+import numpy as np
 from imutils.video import VideoStream
 from imutils.video import FPS
 from pandas import DataFrame
@@ -23,6 +25,9 @@ try:
     from control.DaSiamRPN.code.utils import get_axis_aligned_bbox, cxy_wh_2_rect
 except ImportError:
     print('Warning: DaSiamRPN is not available!')
+
+# define tracking type
+neuralTrack = bool(False)
 
 # define tracking variables
 x = 0
@@ -90,12 +95,6 @@ z_values.append(0)
 availvid = []
 
 
-# button press commands
-def swapHorizontal():
-    global horizder
-    horizder = not horizder
-
-
 # checks for bluriness
 def variance_of_laplacian(image):
     # compute the Laplacian of the image and then return the focus
@@ -129,6 +128,8 @@ panelA = None
 panelB = None
 frame = None
 thread = None
+thread2 = None
+state = None
 stopEvent = threading.Event()
 
 
@@ -207,6 +208,19 @@ else:
     # OpenCV object tracker objects
     tracker = OPENCV_OBJECT_TRACKERS[args["tracker"]]()
 
+    try:
+        # load net
+        net = SiamRPNvot()
+        net.load_state_dict(torch.load(join(realpath(dirname(__file__)), 'DaSiamRPN', 'code', 'SiamRPNBIG.model')))
+        net.eval().cuda()
+        print('Finished loading net ...')
+        neuralTrack = bool(True)
+
+    except:
+        print('No neural net model found ...')
+        print('reverting to default OpenCV tracker')
+        neuralTrack = bool(False)
+
 # initialize the bounding box coordinates
 initBB = None
 
@@ -236,7 +250,7 @@ fps = FPS().start()
 
 
 def videoLoop():
-    global vs, panelB, frame, initBB, x, y, w, h, H, W, centered, fps
+    global vs, panelB, frame, initBB, x, y, w, h, H, W, centered, fps, state
     try:
         # keep looping over frames until we are instructed to stop
         while not stopEvent.is_set():
@@ -249,26 +263,30 @@ def videoLoop():
             # check to see if we are currently tracking an object
             if initBB is not None:
                 # grab the new bounding box coordinates of the object
-                (success, box) = tracker.update(frame)
-                state = SiamRPN_track(state, frame)
+                if neuralTrack:
+                    state = SiamRPN_track(state, frame)
 
-                success = True
+                    success = True
 
-                if (success):
-                    # (x,y,w,h)
-                    box = cxy_wh_2_rect(state['target_pos'], state['target_sz'])
+                    if success:
+                        # (x,y,w,h)
+                        box = cxy_wh_2_rect(state['target_pos'], state['target_sz'])
+                        box = [int(j) for j in box]
 
-                    box = [int(l) for l in box]
+                        cv2.rectangle(frame, (box[0], box[1]), (box[0] + box[2], box[1] + box[3]), (0, 255, 255), 3)
 
-                if success:
-                    (x, y, w, h) = [int(v) for v in box]
-                    centered = makemove()
-                    if centered:
-                        cv2.rectangle(frame, (x, y), (x + w, y + h),
-                                      (0, 255, 0), 2)
-                    else:
-                        cv2.rectangle(frame, (x, y), (x + w, y + h),
-                                      (0, 0, 255), 2)
+                else:
+                    (success, box) = tracker.update(frame)
+
+                    if success:
+                        (x, y, w, h) = [int(v) for v in box]
+                        centered = makemove()
+                        if centered:
+                            cv2.rectangle(frame, (x, y), (x + w, y + h),
+                                          (0, 255, 0), 2)
+                        else:
+                            cv2.rectangle(frame, (x, y), (x + w, y + h),
+                                          (0, 0, 255), 2)
 
             fps.update()
             fps.stop()
@@ -514,12 +532,17 @@ def testDevice(source):
 
 # starts tracking and prompts user to select the object that they wish to track
 def startTracking():
-    global frame, initBB, tracker, tracking, thread2
+    global frame, initBB, tracker, tracking, thread2, neuralTrack, state
     # if the 's' key is selected start tracking
     initBB = cv2.selectROI('Selection', frame, showCrosshair=True)
     cv2.destroyWindow('Selection')
     # start OpenCV object tracker using the supplied bounding box
-    tracker.init(frame, initBB)
+    if neuralTrack:
+        [cx, cy, wi, hi] = get_axis_aligned_bbox(initBB)
+        target_pos, target_sz = np.array([cx, cy]), np.array([wi, hi])
+        state = SiamRPN_init(frame, target_pos, target_sz, net)
+    else:
+        tracker.init(frame, initBB)
     # thread2.start()
     tracking = True
 
