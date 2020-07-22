@@ -532,7 +532,7 @@ def testDevice(source):
 
 # starts tracking and prompts user to select the object that they wish to track
 def startTracking():
-    global frame, initBB, tracker, tracking, thread2, neuralTrack, state
+    global frame, initBB, tracker, tracking, thread2, neuralTrack, state, ser1
     # if the 's' key is selected start tracking
     initBB = cv2.selectROI('Selection', frame, showCrosshair=True)
     cv2.destroyWindow('Selection')
@@ -543,6 +543,8 @@ def startTracking():
         state = SiamRPN_init(frame, target_pos, target_sz, net)
     else:
         tracker.init(frame, initBB)
+
+    ser1.flush()
     # thread2.start()
     tracking = True
 

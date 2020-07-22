@@ -44,18 +44,16 @@ centery = 0
 
 # flipping variables
 portopen = bool(False)
-horizder = bool(False)
-vertder = bool(True)
 rotate = bool(False)
 sendrepeat = bool(False)
 centered = bool(False)
 tracking = bool(False)
 
 # range limits
-xrangehl = 65
-xrangell = 35
-yrangehl = 65
-yrangell = 35
+xrangehl = 60
+xrangell = 40
+yrangehl = 60
+yrangell = 40
 
 # graphing stuff
 currx = 0
@@ -79,14 +77,7 @@ x_values.append(0)
 y_values.append(0)
 z_values.append(0)
 
-
 availvid = []
-
-
-# button press commands
-def swapHorizontal():
-    global horizder
-    horizder = not horizder
 
 
 # checks for bluriness
@@ -94,17 +85,6 @@ def variance_of_laplacian(image):
     # compute the Laplacian of the image and then return the focus
     # measure, which is simply the variance of the Laplacian
     return cv2.Laplacian(image, cv2.CV_64F).var()
-
-
-# button press commands
-def swapHorizontal():
-    global horizder
-    horizder = not horizder
-
-
-def swapVertical():
-    global vertder
-    vertder = not vertder
 
 
 def savePlot():
@@ -122,6 +102,7 @@ panelA = None
 panelB = None
 frame = None
 thread = None
+thread2 = None
 stopEvent = threading.Event()
 
 
@@ -203,10 +184,11 @@ initBB = None
 
 
 # def sendCommand(cmd):
-#     global portopen, ser1
-#     ser1.flush()
+#     global portopen, ser1, centered
 #     if portopen:
 #         ser1.write(cmd)
+#         if not centered:
+#             ser1.write(cmd)
 
 
 def sendCommand(cmd):
@@ -300,11 +282,13 @@ def onClose():
     sys.exit()
 
 
-# defines how to make a move depending on location of bounding box center
+sendIter = 0
+
+
 # defines how to make a move depending on location of bounding box center
 def makemove():
     global smallx, largex, centerx, smally, largey, centery, newxdirection, oldxdirection, newydirection, \
-        oldydirection, ydirection, xdirection, x, y, w, h, W, H, currx, curry, centered
+        oldydirection, ydirection, xdirection, x, y, w, h, W, H, currx, curry, centered, sendIter
     smallx = x
     largex = x + w
     centerx = (smallx + largex) / 2
@@ -314,61 +298,49 @@ def makemove():
 
     # Send X direction
     if ((centerx / W) * 100) > xrangehl:
-        if horizder:
-            newxdirection = 'L'
-            currx = currx - 1
-            addpoint()
-        else:
-            newxdirection = 'R'
-            currx = currx + 1
-            addpoint()
+        newxdirection = 'R'
+        currx = currx - 1
+        addpoint()
     elif ((centerx / W) * 100) < xrangell:
-        if horizder:
-            newxdirection = 'R'
-            currx = currx + 1
-            addpoint()
-        else:
-            newxdirection = 'L'
-            currx = currx - 1
-            addpoint()
+        newxdirection = 'L'
+        currx = currx + 1
+        addpoint()
     else:
         newxdirection = 'X'
 
     if oldxdirection != newxdirection:
         sendCommand(newxdirection.encode())
-        # ser1.flush()
         oldxdirection = newxdirection
+
+    if sendIter == 50:
+        sendCommand(newxdirection.encode())
 
     # Send Y direction
     if ((centery / H) * 100) > yrangehl:
-        if vertder:
-            newydirection = 'D'
-            curry = curry + 1
-            addpoint()
-        else:
-            newydirection = 'U'
-            curry = curry - 1
-            addpoint()
+        newydirection = 'U'
+        curry = curry - 1
+        addpoint()
     elif ((centery / H) * 100) < yrangell:
-        if vertder:
-            newydirection = 'U'
-            curry = curry - 1
-            addpoint()
-        else:
-            newydirection = 'D'
-            curry = curry + 1
-            addpoint()
+        newydirection = 'D'
+        curry = curry + 1
+        addpoint()
+
     else:
         newydirection = 'Y'
     if oldydirection != newydirection:
         sendCommand(newydirection.encode())
-        # ser1.flush()
         oldydirection = newydirection
+
+    if sendIter == 50:
+        sendCommand(newydirection.encode())
+        sendIter = 0
 
     if (newydirection == 'Y') and (newxdirection == 'X'):
         centered = True
+        sendIter = 0
     else:
         centered = False
+        sendIter = sendIter + 1
 
     return centered
 
@@ -495,12 +467,13 @@ def testDevice(source):
 
 # starts tracking and prompts user to select the object that they wish to track
 def startTracking():
-    global frame, initBB, tracker, tracking, thread2
+    global frame, initBB, tracker, tracking, thread2, ser1
     # if the 's' key is selected start tracking
     initBB = cv2.selectROI('Selection', frame, showCrosshair=True)
     cv2.destroyWindow('Selection')
     # start OpenCV object tracker using the supplied bounding box
     tracker.init(frame, initBB)
+    ser1.flush()
     # thread2.start()
     tracking = True
 
@@ -508,8 +481,8 @@ def startTracking():
 # define the buttons and their commands
 startButton = Button(root, text="Start Tracking", command=startTracking, activebackground='yellow')
 plotButton = Button(root, text="Plot Graph", command=plotgraph, activebackground='yellow')
-hFlipButton = Button(root, text="Flip HorizDir", command=swapHorizontal, activebackground='yellow')
-vFlipButton = Button(root, text="Flip VertDir", command=swapVertical, activebackground='yellow')
+hFlipButton = Button(root, text="Flip HorizDir", command=screenshot, activebackground='yellow')
+vFlipButton = Button(root, text="Flip VertDir", command=screenshot, activebackground='yellow')
 screenButton = Button(root, text="Screenshot", command=screenshot, activebackground='yellow')
 stopButton = Button(root, text="Quit", command=onClose, activebackground='yellow')
 saveButton = Button(root, text="Save Plot", command=savePlot, activebackground='yellow')
