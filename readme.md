@@ -5,23 +5,26 @@
 ### AutoFocus.py
 This program is to be run on a Raspberry Pi. Uses Picamera library and the Arducam Autofocus Replacement on the Raspberry Pi V2 Camera to autofocus and capture the most focused image.
 
-### GUI_tracking.py
-This program is to be run on a laptop. It has the full object-tracking capability and has a user-friendly GUI (work-in-progress)
+### Trackoscope.py
+This program is to be run on a laptop. It has the full object-tracking capability and has a user-friendly GUI. This is the main program.
+
+### TrackoscopeRPN.py
+This program is to be run on a laptop. It has the full object-tracking capability and has a user-friendly GUI. Opposed to the csrt tracker, this uses a faster neural net tracker (DiSiamRPN)
 
 ### PiFPSTest.py
 This program is to be run on a Raspberry Pi with a Raspberry Pi Camera. Optimizes FPS through threading. Max FPS achieved: 160 fps
 
 ### Tracking_Rasp.py
-This program is to be run on a Raspberry Pi. It has limited object-tracking capability and has a user-friendly GUI. Treats the Pi Camera as a webcam.
-
-### Tracking_RaspFPSOpt.py
 This program is to be run on a Raspberry Pi. It has limited object-tracking capability and has a user-friendly GUI. Uses a Pi Camera library to try and optimize FPS.
 
-### object_tracking.py
+### NonGUITracking.py
 This program is to be run on a laptop. It is the earliest stage of object-tracking.
 
-### simpleMove.py
-This program is to be run on a Raspberry Pi. It is used to debug the issue regarding failure to send instructions to the Arduino.
+### IsolationTestingZAxis.py
+Tests functionality of the z axis to help with integration.
+
+### IsolationTestingTracking.py
+Tests the tracking and monitors fps for debugging.
 
 ## Getting Started
 This project uses python virtual environments
@@ -37,5 +40,6 @@ Open a command prompt and then install the dependencies to get it working.
 * 3 NEMA 17 Stepper Motors
 * Raspberry Pi
 * Pi Camera
+* Webcam/USB Camera
 
 

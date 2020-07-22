@@ -313,7 +313,7 @@ def makemove():
         oldxdirection = newxdirection
 
     if sendIter == 50:
-        sendCommand(newxdirection.encode())
+        sendCommand(oldxdirection.encode())
 
     # Send Y direction
     if ((centery / H) * 100) > yrangehl:
@@ -332,7 +332,7 @@ def makemove():
         oldydirection = newydirection
 
     if sendIter == 50:
-        sendCommand(newydirection.encode())
+        sendCommand(oldydirection.encode())
         sendIter = 0
 
     if (newydirection == 'Y') and (newxdirection == 'X'):

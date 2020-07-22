@@ -6,16 +6,14 @@ import imutils
 import threading
 import argparse
 import cv2
-import os
 from time import sleep
-import pyautogui
-import serial.tools.list_ports
 import serial
-from imutils.video.pivideostream import PiVideoStream
+import pyautogui
+import glob
+from imutils.video import VideoStream
 from imutils.video import FPS
 from pandas import DataFrame
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 # define tracking variables
@@ -46,18 +44,16 @@ centery = 0
 
 # flipping variables
 portopen = bool(False)
-horizder = bool(False)
-vertder = bool(True)
 rotate = bool(False)
 sendrepeat = bool(False)
 centered = bool(False)
 tracking = bool(False)
 
 # range limits
-xrangehl = 65
-xrangell = 35
-yrangehl = 65
-yrangell = 35
+xrangehl = 60
+xrangell = 40
+yrangehl = 60
+yrangell = 40
 
 # graphing stuff
 currx = 0
@@ -81,23 +77,14 @@ x_values.append(0)
 y_values.append(0)
 z_values.append(0)
 
+availvid = []
+
 
 # checks for bluriness
 def variance_of_laplacian(image):
     # compute the Laplacian of the image and then return the focus
     # measure, which is simply the variance of the Laplacian
     return cv2.Laplacian(image, cv2.CV_64F).var()
-
-
-# button press commands
-def swapHorizontal():
-    global horizder
-    horizder = not horizder
-
-
-def swapVertical():
-    global vertder
-    vertder = not vertder
 
 
 def savePlot():
@@ -115,6 +102,7 @@ panelA = None
 panelB = None
 frame = None
 thread = None
+thread2 = None
 stopEvent = threading.Event()
 
 
@@ -124,18 +112,48 @@ def addpoint():
     if count == countmax:
         x_values.append(currx)
         y_values.append(curry)
+        # plotgraph()
         count = 0
     count = count + 1
 
 
+# check for available serial ports
+def serial_ports():
+    # List serial ports
+    if sys.platform.startswith('win'):
+        ports = ['COM%s' % (i + 1) for i in range(50)]
+    elif sys.platform.startswith('linux') or sys.platform.startswith('cygwin'):
+        # this excludes your current terminal "/dev/tty"
+        ports = glob.glob('/dev/tty[A-Za-z]*')
+    elif sys.platform.startswith('darwin'):
+        ports = glob.glob('/dev/tty.*')
+    else:
+        raise EnvironmentError('Unsupported platform')
+
+    result = []
+    for port in ports:
+        try:
+            s = serial.Serial(port)
+            s.close()
+            result.append(port)
+        except (OSError, serial.SerialException):
+            pass
+    return result
+
+
 # open Arduino Serial
-ser1 = serial.Serial('/dev/ttyACM0', 115200)
-ser1.flush()
-sleep(2)
-portopen = True
+availableport = serial_ports()
+if len(availableport) > 0:
+    ser1 = serial.Serial(availableport[0], 115200)
+    sleep(1)
+    ser1.flush()
+    sleep(1)
+    portopen = True
 
 # construct the argument parser for opencv and parse the arguments
 ap = argparse.ArgumentParser()
+ap.add_argument("-v", "--video", type=str,
+                help="path to input video file")
 ap.add_argument("-t", "--tracker", type=str, default="csrt",
                 help="OpenCV object tracker type")
 args = vars(ap.parse_args())
@@ -157,6 +175,7 @@ else:
         "medianflow": cv2.TrackerMedianFlow_create,
         "mosse": cv2.TrackerMOSSE_create
     }
+
     # OpenCV object tracker objects
     tracker = OPENCV_OBJECT_TRACKERS[args["tracker"]]()
 
@@ -165,10 +184,11 @@ initBB = None
 
 
 # def sendCommand(cmd):
-#     global portopen, ser1
-#     ser1.flush()
+#     global portopen, ser1, centered
 #     if portopen:
 #         ser1.write(cmd)
+#         if not centered:
+#             ser1.write(cmd)
 
 
 def sendCommand(cmd):
@@ -188,16 +208,15 @@ def sendCommandThread(cmd, serport):
 fps = FPS().start()
 
 
-# main video loop that sets everything and refreshes the screen
 def videoLoop():
-    global vs, panelB, frame, initBB, x, y, w, h, H, W, centered, fps, blurry, zdirection
+    global vs, panelB, frame, initBB, x, y, w, h, H, W, centered, fps
     try:
         # keep looping over frames until we are instructed to stop
         while not stopEvent.is_set():
             # grab the frame from the video stream and resize it to
             # have a maximum width of 300 pixels
             frame = vs.read()
-            frame = imutils.resize(frame, width=500)
+            frame = imutils.resize(frame, width=600)
             (H, W) = frame.shape[:2]
 
             # check to see if we are currently tracking an object
@@ -206,7 +225,8 @@ def videoLoop():
                 (success, box) = tracker.update(frame)
                 if success:
                     (x, y, w, h) = [int(v) for v in box]
-                    centered = makemove()
+                    # centered = makemove()
+                    centered = True
                     if centered:
                         cv2.rectangle(frame, (x, y), (x + w, y + h),
                                       (0, 255, 0), 2)
@@ -220,13 +240,14 @@ def videoLoop():
             # initialize info on screen
             info = [
                 ("FPS", "{:.2f}".format(fps.fps())),
-                ("Blurry", calculateBlur())
+                ("X-Move", oldxdirection),
+                ("Y-Move", oldydirection)
             ]
 
             for (i, (k, v)) in enumerate(info):
                 text = "{}: {}".format(k, v)
                 cv2.putText(frame, text, (10, H - ((i * 20) + 20)),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 2)
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
 
             # Put Video source in Tkinter format
             image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -248,7 +269,6 @@ def videoLoop():
         print("[INFO] caught a RuntimeError")
 
 
-# shuts everything down when window closed
 def onClose():
     # set the stop event, cleanup the camera, and allow the rest of
     # the quit process to continue
@@ -263,16 +283,71 @@ def onClose():
     sys.exit()
 
 
+sendIter = 0
+
+
 # defines how to make a move depending on location of bounding box center
 def makemove():
-    global centered
+    global smallx, largex, centerx, smally, largey, centery, newxdirection, oldxdirection, newydirection, \
+        oldydirection, ydirection, xdirection, x, y, w, h, W, H, currx, curry, centered, sendIter
+    smallx = x
+    largex = x + w
+    centerx = (smallx + largex) / 2
+    smally = y
+    largey = y + h
+    centery = (smally + largey) / 2
 
-    centered = True
+    # Send X direction
+    if ((centerx / W) * 100) > xrangehl:
+        newxdirection = 'R'
+        currx = currx - 1
+        addpoint()
+    elif ((centerx / W) * 100) < xrangell:
+        newxdirection = 'L'
+        currx = currx + 1
+        addpoint()
+    else:
+        newxdirection = 'X'
+
+    if oldxdirection != newxdirection:
+        sendCommand(newxdirection.encode())
+        oldxdirection = newxdirection
+
+    if sendIter == 50:
+        sendCommand(oldxdirection.encode())
+
+    # Send Y direction
+    if ((centery / H) * 100) > yrangehl:
+        newydirection = 'U'
+        curry = curry - 1
+        addpoint()
+    elif ((centery / H) * 100) < yrangell:
+        newydirection = 'D'
+        curry = curry + 1
+        addpoint()
+
+    else:
+        newydirection = 'Y'
+    if oldydirection != newydirection:
+        sendCommand(newydirection.encode())
+        oldydirection = newydirection
+
+    if sendIter == 50:
+        sendCommand(oldydirection.encode())
+        sendIter = 0
+
+    if (newydirection == 'Y') and (newxdirection == 'X'):
+        centered = True
+        sendIter = 0
+    else:
+        centered = False
+        sendIter = sendIter + 1
+
     return centered
 
 
 # figure one data
-figure1 = plt.Figure(figsize=(5, 4), dpi=100)
+figure1 = plt.Figure(figsize=(6, 5), dpi=100)
 ax = figure1.add_subplot(111, projection='3d')
 bar1 = FigureCanvasTkAgg(figure1, root)
 bar1.get_tk_widget().grid(row=0, column=1)
@@ -284,7 +359,6 @@ def threadedZAxis():
         determineFocus()
         if blurry:
             fixBlurMotor()
-            # fixBlurCam()
 
 
 # calculates the blur and returns the blur number
@@ -311,7 +385,6 @@ def fixBlurMotor():
     originalFocus = calculateBlur()
     zdirection = 'b'
     sendCommand(zdirection.encode())
-    # print(ser1.read())
     compareFocus = calculateBlur()
     if compareFocus > originalFocus:
         rightDirection = bool(True)
@@ -321,7 +394,6 @@ def fixBlurMotor():
     # sendCommand('S'.encode())
 
     if rightDirection:
-        print("went in b")
         for j in range(15):
             zdirection = 'b'
             sendCommand(zdirection.encode())
@@ -329,7 +401,6 @@ def fixBlurMotor():
             if calculateBlur() > 80:
                 break
     else:
-        print("went in t")
         for j in range(15):
             zdirection = 't'
             sendCommand(zdirection.encode())
@@ -342,52 +413,6 @@ def fixBlurMotor():
     sendCommand(zdirection.encode())
 
 
-def focusing(val):
-    value = (val << 4) & 0x3ff0
-    data1 = (value >> 8) & 0x3f
-    data2 = value & 0xf0
-    os.system("i2cset -y 0 0x0c %d %d" % (data1, data2))
-
-
-# uses autofocus to fix the blurriness
-def fixBlurCam():
-
-    max_index = 10
-    max_value = 0.0
-    last_value = 0.0
-    dec_count = 0
-    focal_distance = 10
-
-    while True:
-        # Adjust focus
-        focusing(focal_distance)
-        # Take image and calculate image clarity
-        val = calculateBlur()
-        # Find the maximum image clarity
-        if val > max_value:
-            max_index = focal_distance
-            max_value = val
-
-        # If the image clarity starts to decrease
-        if val < last_value:
-            dec_count += 1
-        else:
-            dec_count = 0
-        # Image clarity is reduced by six consecutive frames
-        if dec_count > 6:
-            break
-        last_value = val
-
-        # Increase the focal distance
-        focal_distance += 10
-        if focal_distance > 1000:
-            break
-
-        # Adjust focus to the best
-        focusing(max_index)
-
-
-# sends commands to move in all 6 directions and stop
 def yPos():
     sendCommand('U'.encode())
 
@@ -432,29 +457,33 @@ def plotgraph():
     bar1.draw_idle()
 
 
+# Checks for a valid camera
+def testDevice(source):
+    cap = cv2.VideoCapture(source)
+    if cap is None or not cap.isOpened():
+        return False
+    else:
+        return True
+
+
 # starts tracking and prompts user to select the object that they wish to track
 def startTracking():
-    global frame, initBB, tracker, tracking, ser1, thread2, portopen
-
+    global frame, initBB, tracker, tracking, thread2, ser1
+    # if the 's' key is selected start tracking
     initBB = cv2.selectROI('Selection', frame, showCrosshair=True)
     cv2.destroyWindow('Selection')
-
     # start OpenCV object tracker using the supplied bounding box
     tracker.init(frame, initBB)
-    thread2.start()
-    ser1.close()
-    ser1 = serial.Serial('/dev/ttyACM0', 115200)
     ser1.flush()
-    sleep(2)
-    portopen = True
+    thread2.start()
     tracking = True
 
 
 # define the buttons and their commands
 startButton = Button(root, text="Start Tracking", command=startTracking, activebackground='yellow')
 plotButton = Button(root, text="Plot Graph", command=plotgraph, activebackground='yellow')
-hFlipButton = Button(root, text="Flip HorizDir", command=swapHorizontal, activebackground='yellow')
-vFlipButton = Button(root, text="Flip VertDir", command=swapVertical, activebackground='yellow')
+hFlipButton = Button(root, text="Flip HorizDir", command=screenshot, activebackground='yellow')
+vFlipButton = Button(root, text="Flip VertDir", command=screenshot, activebackground='yellow')
 screenButton = Button(root, text="Screenshot", command=screenshot, activebackground='yellow')
 stopButton = Button(root, text="Quit", command=onClose, activebackground='yellow')
 saveButton = Button(root, text="Save Plot", command=savePlot, activebackground='yellow')
@@ -468,10 +497,17 @@ zposButton = Button(root, text="Z+", command=zPos, activebackground='yellow')
 znegButton = Button(root, text="Z-", command=zNeg, activebackground='yellow')
 stopmovButton = Button(root, text="S", command=stopMov, activebackground='yellow')
 
-# start video stream
-print("[INFO] starting video stream...")
-vs = PiVideoStream().start()
-sleep(1.0)
+# if a video path was not supplied, grab the reference to the web cam
+if not args.get("video", False):
+    print("[INFO] starting video stream...")
+    for x in range(3):
+        if testDevice(x):
+            availvid.append(x)
+    vs = VideoStream(src=(availvid[len(availvid) - 1])).start()
+    sleep(1.0)
+# otherwise, grab a reference to the video file
+else:
+    vs = cv2.VideoCapture(args["video"])
 
 # place the buttons
 startButton.grid(row=1, column=0, sticky='WENS')
