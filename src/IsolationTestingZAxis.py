@@ -102,7 +102,7 @@ panelA = None
 panelB = None
 frame = None
 thread = None
-thread2 = None
+# thread2 = None
 stopEvent = threading.Event()
 
 
@@ -183,33 +183,33 @@ else:
 initBB = None
 
 
-# def sendCommand(cmd):
-#     global portopen, ser1, centered
-#     if portopen:
-#         ser1.write(cmd)
-#         if not centered:
-#             ser1.write(cmd)
-
-
 def sendCommand(cmd):
-    global portopen, ser1
+    global portopen, ser1, centered
     if portopen:
-        thread3 = threading.Thread(target=sendCommandThread, args=(cmd, ser1))
-        thread3.start()
+        ser1.write(cmd)
+        if not centered:
+            ser1.write(cmd)
 
 
-# sends command to the Arduino over serial port
-def sendCommandThread(cmd, serport):
-    serport.write(cmd)
-    if not centered:
-        serport.write(cmd)
+# def sendCommand(cmd):
+#     global portopen, ser1
+#     if portopen:
+#         thread3 = threading.Thread(target=sendCommandThread, args=(cmd, ser1))
+#         thread3.start()
+#
+#
+# # sends command to the Arduino over serial port
+# def sendCommandThread(cmd, serport):
+#     serport.write(cmd)
+#     if not centered:
+#         serport.write(cmd)
 
 
 fps = FPS().start()
 
 
 def videoLoop():
-    global vs, panelB, frame, initBB, x, y, w, h, H, W, centered, fps
+    global vs, panelB, frame, initBB, x, y, w, h, H, W, centered, fps, blurry, zdirection
     try:
         # keep looping over frames until we are instructed to stop
         while not stopEvent.is_set():
@@ -240,8 +240,8 @@ def videoLoop():
             # initialize info on screen
             info = [
                 ("FPS", "{:.2f}".format(fps.fps())),
-                ("X-Move", oldxdirection),
-                ("Y-Move", oldydirection)
+                ("Z-Move", zdirection),
+                ("Blur", "Yes" if blurry else "No")
             ]
 
             for (i, (k, v)) in enumerate(info):
@@ -373,7 +373,7 @@ def calculateBlur():
 # determines if it is in focus or not
 def determineFocus():
     global blurry
-    if calculateBlur() < 80:
+    if calculateBlur() < 150:
         blurry = bool(True)
     else:
         blurry = bool(False)
@@ -475,6 +475,7 @@ def startTracking():
     # start OpenCV object tracker using the supplied bounding box
     tracker.init(frame, initBB)
     ser1.flush()
+    sleep(1)
     thread2.start()
     tracking = True
 

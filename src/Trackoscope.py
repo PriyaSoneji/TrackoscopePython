@@ -352,12 +352,17 @@ bar1 = FigureCanvasTkAgg(figure1, root)
 bar1.get_tk_widget().grid(row=0, column=1)
 
 
-def threadedZAxis():
-    while not stopEvent.is_set():
-        # Z-Axis Detection
+def focusing():
+    if not tracking:
         determineFocus()
         if blurry:
             fixBlurMotor()
+
+
+def threadedZAxis():
+    while not stopEvent.is_set():
+        # Z-Axis Detection
+        focusing()
 
 
 # calculates the blur and returns the blur number
@@ -481,7 +486,7 @@ def startTracking():
 # define the buttons and their commands
 startButton = Button(root, text="Start Tracking", command=startTracking, activebackground='yellow')
 plotButton = Button(root, text="Plot Graph", command=plotgraph, activebackground='yellow')
-hFlipButton = Button(root, text="Flip HorizDir", command=screenshot, activebackground='yellow')
+zFocusButton = Button(root, text="Focus", command=focusing, activebackground='yellow')
 vFlipButton = Button(root, text="Flip VertDir", command=screenshot, activebackground='yellow')
 screenButton = Button(root, text="Screenshot", command=screenshot, activebackground='yellow')
 stopButton = Button(root, text="Quit", command=onClose, activebackground='yellow')
@@ -511,7 +516,7 @@ else:
 # place the buttons
 startButton.grid(row=1, column=0, sticky='WENS')
 plotButton.grid(row=1, column=1, sticky='WENS')
-hFlipButton.grid(row=2, column=0, sticky='WENS')
+zFocusButton.grid(row=2, column=0, sticky='WENS')
 vFlipButton.grid(row=2, column=1, sticky='WENS')
 screenButton.grid(row=3, column=0, sticky='WENS')
 stopButton.grid(row=3, column=1, sticky='WENS')
@@ -527,7 +532,7 @@ stopmovButton.grid(row=2, column=3, sticky='WENS')
 
 # start videoloop thread
 thread = threading.Thread(target=videoLoop, args=())
-# thread2 = threading.Thread(target=threadedZAxis, args=())
+thread2 = threading.Thread(target=threadedZAxis, args=())
 thread.start()
 
 root.wm_title("Trackoscope")
