@@ -9,6 +9,7 @@ import argparse
 import cv2
 from time import sleep
 import serial
+from serial import Serial
 import pyautogui
 import glob
 import numpy as np
@@ -164,7 +165,8 @@ def serial_ports():
 # open Arduino Serial
 availableport = serial_ports()
 if len(availableport) > 0:
-    ser1 = serial.Serial(availableport[0], 2000000)
+    # ser1 = serial.Serial(availableport[0], 2000000)
+    ser1 = serial.Serial("COM3", 2000000)
     sleep(1)
     ser1.flush()
     sleep(2)
@@ -182,22 +184,19 @@ args = vars(ap.parse_args())
 (major, minor) = cv2.__version__.split(".")[:2]
 
 # function to create our object tracker
-if int(major) == 3 and int(minor) < 3:
-    tracker = cv2.Tracker_create(args["tracker"].upper())
-else:
-    # OpenCV object tracker implementations
-    OPENCV_OBJECT_TRACKERS = {
-        "csrt": cv2.TrackerCSRT_create,
-        "kcf": cv2.TrackerKCF_create,
-        "boosting": cv2.TrackerBoosting_create,
-        "mil": cv2.TrackerMIL_create,
-        "tld": cv2.TrackerTLD_create,
-        "medianflow": cv2.TrackerMedianFlow_create,
-        "mosse": cv2.TrackerMOSSE_create
-    }
+# OpenCV object tracker implementations
+OPENCV_OBJECT_TRACKERS = {
+    "csrt": cv2.TrackerCSRT_create,
+    "kcf": cv2.TrackerKCF_create,
+    "boosting": cv2.TrackerBoosting_create,
+    "mil": cv2.TrackerMIL_create,
+    "tld": cv2.TrackerTLD_create,
+    "medianflow": cv2.TrackerMedianFlow_create,
+    "mosse": cv2.TrackerMOSSE_create
+}
 
-    # OpenCV object tracker objects
-    tracker = OPENCV_OBJECT_TRACKERS[args["tracker"]]()
+# OpenCV object tracker objects
+tracker = OPENCV_OBJECT_TRACKERS[args["tracker"]]()
 
 # initialize the bounding box coordinates
 initBB = None
@@ -536,6 +535,7 @@ if not args.get("video", False):
         if testDevice(x):
             availvid.append(x)
     vs = VideoStream(src=(availvid[len(availvid) - 1])).start()
+    # vs = VideoStream(src=0).start()
     sleep(1.0)
 # otherwise, grab a reference to the video file
 else:
