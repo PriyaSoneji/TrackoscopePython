@@ -1,3 +1,4 @@
+# make sure bluetooth is off
 import tkinter as tk
 from tkinter import *
 from PIL import Image
@@ -10,6 +11,7 @@ from time import sleep
 import serial
 import pyautogui
 import glob
+import numpy as np
 from imutils.video import VideoStream
 from imutils.video import FPS
 from pandas import DataFrame
@@ -68,6 +70,7 @@ rightDirection = bool(False)
 focus = 0
 originalFocus = 0
 compareFocus = 0
+blurcap = 40
 
 x_values = []
 y_values = []
@@ -85,6 +88,23 @@ def variance_of_laplacian(image):
     # compute the Laplacian of the image and then return the focus
     # measure, which is simply the variance of the Laplacian
     return cv2.Laplacian(image, cv2.CV_64F).var()
+
+
+def fft_blur_detection(image, thresh):
+    (h, w) = image.shape
+    (cX, cY) = (int(w / 2.0), int(h / 2.0))
+
+    fft = np.fft.fft2(image)
+    fftShift = np.fft.fftshift(fft)
+
+    fftShift[cY - 60:cY + 60, cX - 60:cX + 60] = 0
+    fftShift = np.fft.ifftshift(fftShift)
+    recon = np.fft.ifft2(fftShift)
+
+    magnitude = 20 * np.log(np.abs(recon))
+    mean = np.mean(magnitude)
+
+    return mean, mean <= thresh
 
 
 def savePlot():
@@ -144,10 +164,10 @@ def serial_ports():
 # open Arduino Serial
 availableport = serial_ports()
 if len(availableport) > 0:
-    ser1 = serial.Serial(availableport[0], 115200)
+    ser1 = serial.Serial(availableport[0], 2000000)
     sleep(1)
     ser1.flush()
-    sleep(1)
+    sleep(2)
     portopen = True
 
 # construct the argument parser for opencv and parse the arguments
@@ -183,15 +203,13 @@ else:
 initBB = None
 
 
-# def sendCommand(cmd):
-#     global portopen, ser1, centered
-#     if portopen:
-#         ser1.write(cmd)
-#         if not centered:
-#             ser1.write(cmd)
-
-
 def sendCommand(cmd):
+    global portopen, ser1, centered
+    if portopen:
+        ser1.write(cmd)
+
+
+def sendCommandT(cmd):
     global portopen, ser1
     if portopen:
         thread3 = threading.Thread(target=sendCommandThread, args=(cmd, ser1))
@@ -201,8 +219,7 @@ def sendCommand(cmd):
 # sends command to the Arduino over serial port
 def sendCommandThread(cmd, serport):
     serport.write(cmd)
-    if not centered:
-        serport.write(cmd)
+    print("sent command")
 
 
 fps = FPS().start()
@@ -274,7 +291,7 @@ def onClose():
     global initBB
     print("[INFO] closing...")
     cv2.destroyAllWindows()
-    sendCommand('S'.encode())
+    sendCommand('E'.encode())
     vs.stop()
     initBB = None
     stopEvent.set()
@@ -353,68 +370,74 @@ bar1.get_tk_widget().grid(row=0, column=1)
 
 
 def focusing():
-    if not tracking:
-        determineFocus()
-        if blurry:
-            fixBlurMotor()
+    global blurry
+    calculateBlur()
+    if blurry:
+        fixBlurMotor()
 
 
 def threadedZAxis():
     while not stopEvent.is_set():
         # Z-Axis Detection
         focusing()
+        sleep(2)
 
 
 # calculates the blur and returns the blur number
 def calculateBlur():
-    global focus
+    global focus, blurry, blurcap
     image = vs.read()
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     focus = round(variance_of_laplacian(gray), 2)
-    return focus
-
-
-# determines if it is in focus or not
-def determineFocus():
-    global blurry
-    if calculateBlur() < 80:
-        blurry = bool(True)
-    else:
+    if focus < blurcap:
         blurry = bool(False)
+    else:
+        blurry = bool(True)
+
+    # (focus, blurry) = fft_blur_detection(gray, blurcap)
+    print("Focus: " + str(focus))
+    return focus
 
 
 # uses a motor to fix the blur
 def fixBlurMotor():
-    global originalFocus, compareFocus, rightDirection, focus, zdirection
+    global originalFocus, compareFocus, rightDirection, focus, zdirection, blurcap
     originalFocus = calculateBlur()
     zdirection = 'b'
     sendCommand(zdirection.encode())
+    sleep(1)
+
     compareFocus = calculateBlur()
-    if compareFocus > originalFocus:
+    print("Compare Focus: " + str(compareFocus))
+
+    if compareFocus < originalFocus:
         rightDirection = bool(True)
     else:
         rightDirection = bool(False)
 
-    # sendCommand('S'.encode())
-
     if rightDirection:
-        for j in range(15):
+        print("went in if")
+        for j in range(10):
             zdirection = 'b'
             sendCommand(zdirection.encode())
-            sleep(0.1)
-            if calculateBlur() > 80:
+            sleep(1)
+            if calculateBlur() < blurcap:
+                print("focused now")
                 break
     else:
-        for j in range(15):
+        print("went in else")
+        for k in range(10):
             zdirection = 't'
             sendCommand(zdirection.encode())
-            sleep(0.1)
-            if calculateBlur() > 80:
+            sleep(1)
+            if calculateBlur() < blurcap:
+                print("focused now")
                 break
 
-    determineFocus()
+    calculateBlur()
     zdirection = 'Z'
     sendCommand(zdirection.encode())
+    print("end focusing")
 
 
 def yPos():
@@ -434,15 +457,20 @@ def xNeg():
 
 
 def zPos():
-    sendCommand('T'.encode())
+    sendCommand('t'.encode())
 
 
 def zNeg():
-    sendCommand('B'.encode())
+    sendCommand('b'.encode())
 
 
 def stopMov():
     sendCommand('S'.encode())
+
+
+def hardStop():
+    sendCommand('E'.encode())
+    ser1.flush()
 
 
 # plots the graph using matplotlib
@@ -487,7 +515,7 @@ def startTracking():
 startButton = Button(root, text="Start Tracking", command=startTracking, activebackground='yellow')
 plotButton = Button(root, text="Plot Graph", command=plotgraph, activebackground='yellow')
 zFocusButton = Button(root, text="Focus", command=focusing, activebackground='yellow')
-vFlipButton = Button(root, text="Flip VertDir", command=screenshot, activebackground='yellow')
+hardStopButton = Button(root, text="Hard Stop", command=hardStop, activebackground='yellow')
 screenButton = Button(root, text="Screenshot", command=screenshot, activebackground='yellow')
 stopButton = Button(root, text="Quit", command=onClose, activebackground='yellow')
 saveButton = Button(root, text="Save Plot", command=savePlot, activebackground='yellow')
@@ -517,7 +545,7 @@ else:
 startButton.grid(row=1, column=0, sticky='WENS')
 plotButton.grid(row=1, column=1, sticky='WENS')
 zFocusButton.grid(row=2, column=0, sticky='WENS')
-vFlipButton.grid(row=2, column=1, sticky='WENS')
+hardStopButton.grid(row=2, column=1, sticky='WENS')
 screenButton.grid(row=3, column=0, sticky='WENS')
 stopButton.grid(row=3, column=1, sticky='WENS')
 saveButton.grid(row=4, column=0, sticky='WENS')
