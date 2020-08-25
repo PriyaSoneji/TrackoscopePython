@@ -71,7 +71,6 @@ rightDirection = bool(False)
 focus = 0
 originalFocus = 0
 compareFocus = 0
-blurcap = 40
 
 x_values = []
 y_values = []
@@ -367,6 +366,8 @@ ax = figure1.add_subplot(111, projection='3d')
 bar1 = FigureCanvasTkAgg(figure1, root)
 bar1.get_tk_widget().grid(row=0, column=1)
 
+blurcap = 77
+
 
 def focusing():
     global blurry
@@ -387,8 +388,11 @@ def calculateBlur():
     global focus, blurry, blurcap
     image = vs.read()
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    focus = round(variance_of_laplacian(gray), 2)
-    if focus < blurcap:
+
+    # focus = round(variance_of_laplacian(gray), 2)
+    focus = round(cv2.Laplacian(image, cv2.CV_64F).var(), 2)
+
+    if focus > blurcap:
         blurry = bool(False)
     else:
         blurry = bool(True)
@@ -409,7 +413,7 @@ def fixBlurMotor():
     compareFocus = calculateBlur()
     print("Compare Focus: " + str(compareFocus))
 
-    if compareFocus < originalFocus:
+    if compareFocus > originalFocus:
         rightDirection = bool(True)
     else:
         rightDirection = bool(False)
@@ -420,7 +424,7 @@ def fixBlurMotor():
             zdirection = 'b'
             sendCommand(zdirection.encode())
             sleep(1)
-            if calculateBlur() < blurcap:
+            if calculateBlur() > blurcap:
                 print("focused now")
                 break
     else:
@@ -429,7 +433,7 @@ def fixBlurMotor():
             zdirection = 't'
             sendCommand(zdirection.encode())
             sleep(1)
-            if calculateBlur() < blurcap:
+            if calculateBlur() > blurcap:
                 print("focused now")
                 break
 
