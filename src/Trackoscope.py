@@ -366,7 +366,8 @@ ax = figure1.add_subplot(111, projection='3d')
 bar1 = FigureCanvasTkAgg(figure1, root)
 bar1.get_tk_widget().grid(row=0, column=1)
 
-blurcap = 77
+blurcap = 120
+focusvar = StringVar()
 
 
 def focusing():
@@ -389,8 +390,8 @@ def calculateBlur():
     image = vs.read()
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
-    # focus = round(variance_of_laplacian(gray), 2)
-    focus = round(cv2.Laplacian(image, cv2.CV_64F).var(), 2)
+    focus = round(variance_of_laplacian(gray), 2)
+    # focus = round(cv2.Laplacian(image, cv2.CV_64F).var(), 2)
 
     if focus > blurcap:
         blurry = bool(False)
@@ -398,49 +399,53 @@ def calculateBlur():
         blurry = bool(True)
 
     # (focus, blurry) = fft_blur_detection(gray, blurcap)
-    print("Focus: " + str(focus))
+    setFocusLabel()
+    print(str(focus))
     return focus
 
 
 # uses a motor to fix the blur
 def fixBlurMotor():
     global originalFocus, compareFocus, rightDirection, focus, zdirection, blurcap
-    originalFocus = calculateBlur()
+    rightDirection = bool(True)
     zdirection = 'b'
-    sendCommand(zdirection.encode())
-    sleep(1)
+    originalFocus = focus
+    for j in range(20):
 
-    compareFocus = calculateBlur()
-    print("Compare Focus: " + str(compareFocus))
+        sleep(0.5)
+        compareFocus = calculateBlur()
 
-    if compareFocus > originalFocus:
-        rightDirection = bool(True)
-    else:
-        rightDirection = bool(False)
+        if j > 0 and abs(compareFocus - originalFocus) > 1:
+            if compareFocus > originalFocus:
+                rightDirection = bool(True)
+            else:
+                rightDirection = bool(False)
+            originalFocus = focus
 
-    if rightDirection:
-        print("went in if")
-        for j in range(10):
-            zdirection = 'b'
+        if not blurry:
+            print("focused now")
+            zdirection = 'S'
             sendCommand(zdirection.encode())
-            sleep(1)
-            if calculateBlur() > blurcap:
-                print("focused now")
-                break
-    else:
-        print("went in else")
-        for k in range(10):
-            zdirection = 't'
-            sendCommand(zdirection.encode())
-            sleep(1)
-            if calculateBlur() > blurcap:
-                print("focused now")
-                break
+            break
 
-    calculateBlur()
-    zdirection = 'Z'
-    sendCommand(zdirection.encode())
-    print("end focusing")
+        if rightDirection:
+            print("Continue " + str(zdirection))
+            sendCommand(zdirection.encode())
+
+        else:
+            print("Change")
+            if zdirection == 't':
+                zdirection = 'b'
+            else:
+                zdirection = 't'
+            sendCommand(zdirection.encode())
+
+    print("ended")
+
+
+def setFocusLabel():
+    global focus, focusvar
+    focusvar.set("Focus: " + str(focus))
 
 
 def yPos():
@@ -518,11 +523,11 @@ def startTracking():
 startButton = Button(root, text="Start Tracking", command=startTracking, activebackground='yellow')
 plotButton = Button(root, text="Plot Graph", command=plotgraph, activebackground='yellow')
 zFocusButton = Button(root, text="Focus", command=focusing, activebackground='yellow')
-hardStopButton = Button(root, text="Hard Stop", command=hardStop, activebackground='yellow')
+saveButton = Button(root, text="Save Plot", command=savePlot, activebackground='yellow')
 screenButton = Button(root, text="Screenshot", command=screenshot, activebackground='yellow')
 stopButton = Button(root, text="Quit", command=onClose, activebackground='yellow')
-saveButton = Button(root, text="Save Plot", command=savePlot, activebackground='yellow')
-homeButton = Button(root, text="Check Blur", command=calculateBlur, activebackground='yellow')
+focusLabel = Label(root, textvariable=focusvar, font=("Times", 16))
+blurButton = Button(root, text="Check Blur", command=calculateBlur, activebackground='yellow')
 # buttons to control the movement
 yposButton = Button(root, text="Y+", command=yPos, activebackground='yellow')
 ynegButton = Button(root, text="Y-", command=yNeg, activebackground='yellow')
@@ -549,11 +554,11 @@ else:
 startButton.grid(row=1, column=0, sticky='WENS')
 plotButton.grid(row=1, column=1, sticky='WENS')
 zFocusButton.grid(row=2, column=0, sticky='WENS')
-hardStopButton.grid(row=2, column=1, sticky='WENS')
+saveButton.grid(row=2, column=1, sticky='WENS')
 screenButton.grid(row=3, column=0, sticky='WENS')
 stopButton.grid(row=3, column=1, sticky='WENS')
-saveButton.grid(row=4, column=0, sticky='WENS')
-homeButton.grid(row=4, column=1, sticky='WENS')
+focusLabel.grid(row=4, column=0, sticky='WENS')
+blurButton.grid(row=4, column=1, sticky='WENS')
 yposButton.grid(row=1, column=3, sticky='WENS')
 ynegButton.grid(row=3, column=3, sticky='WENS')
 xposButton.grid(row=2, column=4, sticky='WENS')
