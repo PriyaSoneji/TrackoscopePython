@@ -128,11 +128,11 @@ stopEvent = threading.Event()
 
 # add points to the graph and updates plot
 def addpoint():
-    global count, countmax, figure1
+    global count, countmax, figure1, zval
     if count == countmax:
         x_values.append(currx)
         y_values.append(curry)
-        # plotgraph()
+        z_values.append(zval)
         count = 0
     count = count + 1
 
@@ -297,13 +297,10 @@ def onClose():
     sys.exit()
 
 
-sendIter = 0
-
-
 # defines how to make a move depending on location of bounding box center
 def makemove():
     global smallx, largex, centerx, smally, largey, centery, newxdirection, oldxdirection, newydirection, \
-        oldydirection, ydirection, xdirection, x, y, w, h, W, H, currx, curry, centered, sendIter
+        oldydirection, ydirection, xdirection, x, y, w, h, W, H, currx, curry, centered
     smallx = x
     largex = x + w
     centerx = (smallx + largex) / 2
@@ -327,16 +324,13 @@ def makemove():
         sendCommand(newxdirection.encode())
         oldxdirection = newxdirection
 
-    if sendIter == 50:
-        sendCommand(oldxdirection.encode())
-
     # Send Y direction
     if ((centery / H) * 100) > yrangehl:
-        newydirection = 'U'
+        newydirection = 'D'
         curry = curry - 1
         addpoint()
     elif ((centery / H) * 100) < yrangell:
-        newydirection = 'D'
+        newydirection = 'U'
         curry = curry + 1
         addpoint()
 
@@ -346,16 +340,10 @@ def makemove():
         sendCommand(newydirection.encode())
         oldydirection = newydirection
 
-    if sendIter == 50:
-        sendCommand(oldydirection.encode())
-        sendIter = 0
-
     if (newydirection == 'Y') and (newxdirection == 'X'):
         centered = True
-        sendIter = 0
     else:
         centered = False
-        sendIter = sendIter + 1
 
     return centered
 
@@ -366,8 +354,9 @@ ax = figure1.add_subplot(111, projection='3d')
 bar1 = FigureCanvasTkAgg(figure1, root)
 bar1.get_tk_widget().grid(row=0, column=1)
 
-blurcap = 120
+blurcap = 64
 focusvar = StringVar()
+ogfocus = 0
 
 
 def focusing():
@@ -386,41 +375,54 @@ def threadedZAxis():
 
 # calculates the blur and returns the blur number
 def calculateBlur():
-    global focus, blurry, blurcap
-    image = vs.read()
+    global focus, blurry, blurcap, tracking
+    if tracking:
+        image = vs.read()
+    else:
+        image = vs.read()
+
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
     focus = round(variance_of_laplacian(gray), 2)
     # focus = round(cv2.Laplacian(image, cv2.CV_64F).var(), 2)
-
     if focus > blurcap:
         blurry = bool(False)
     else:
         blurry = bool(True)
 
     # (focus, blurry) = fft_blur_detection(gray, blurcap)
+    # focus = round(focus, 2)
+
     setFocusLabel()
-    print(str(focus))
     return focus
+
+
+updowncount = 0
+zval = 0
 
 
 # uses a motor to fix the blur
 def fixBlurMotor():
-    global originalFocus, compareFocus, rightDirection, focus, zdirection, blurcap
+    global originalFocus, compareFocus, rightDirection, focus, zdirection, blurcap, ogfocus, updowncount, zval
     rightDirection = bool(True)
     zdirection = 'b'
+    ogfocus = focus
     originalFocus = focus
+    updowncount = zval
     for j in range(20):
 
-        sleep(0.5)
+        sleep(0.25)
         compareFocus = calculateBlur()
 
-        if j > 0 and abs(compareFocus - originalFocus) > 1:
+        if abs(compareFocus - originalFocus) > 0.5:
             if compareFocus > originalFocus:
                 rightDirection = bool(True)
             else:
                 rightDirection = bool(False)
             originalFocus = focus
+        elif ((blurcap - compareFocus) - (blurcap - ogfocus)) > 1:
+            print("too far")
+            rightDirection = bool(False)
 
         if not blurry:
             print("focused now")
@@ -428,18 +430,22 @@ def fixBlurMotor():
             sendCommand(zdirection.encode())
             break
 
-        if rightDirection:
-            print("Continue " + str(zdirection))
-            sendCommand(zdirection.encode())
-
-        else:
+        if not rightDirection:
             print("Change")
             if zdirection == 't':
                 zdirection = 'b'
             else:
                 zdirection = 't'
-            sendCommand(zdirection.encode())
 
+        if zdirection == 't':
+            updowncount = updowncount + 1
+        else:
+            updowncount = updowncount - 1
+
+        sendCommand(zdirection.encode())
+
+    zval = updowncount
+    addpoint()
     print("ended")
 
 
@@ -515,7 +521,7 @@ def startTracking():
     # start OpenCV object tracker using the supplied bounding box
     tracker.init(frame, initBB)
     ser1.flush()
-    # thread2.start()
+    thread2.start()
     tracking = True
 
 
