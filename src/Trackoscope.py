@@ -297,10 +297,14 @@ def onClose():
     sys.exit()
 
 
+amountsent = 0
+incrementstepxy = 26.56
+
+
 # defines how to make a move depending on location of bounding box center
 def makemove():
     global smallx, largex, centerx, smally, largey, centery, newxdirection, oldxdirection, newydirection, \
-        oldydirection, ydirection, xdirection, x, y, w, h, W, H, currx, curry, centered
+        oldydirection, ydirection, xdirection, x, y, w, h, W, H, currx, curry, centered, amountsent, incrementstepxy
     smallx = x
     largex = x + w
     centerx = (smallx + largex) / 2
@@ -311,11 +315,11 @@ def makemove():
     # Send X direction
     if ((centerx / W) * 100) > xrangehl:
         newxdirection = 'R'
-        currx = currx - 1
+        currx = currx - incrementstepxy
         addpoint()
     elif ((centerx / W) * 100) < xrangell:
         newxdirection = 'L'
-        currx = currx + 1
+        currx = currx + incrementstepxy
         addpoint()
     else:
         newxdirection = 'X'
@@ -327,11 +331,11 @@ def makemove():
     # Send Y direction
     if ((centery / H) * 100) > yrangehl:
         newydirection = 'D'
-        curry = curry - 1
+        curry = curry - incrementstepxy
         addpoint()
     elif ((centery / H) * 100) < yrangell:
         newydirection = 'U'
-        curry = curry + 1
+        curry = curry + incrementstepxy
         addpoint()
 
     else:
@@ -354,7 +358,7 @@ ax = figure1.add_subplot(111, projection='3d')
 bar1 = FigureCanvasTkAgg(figure1, root)
 bar1.get_tk_widget().grid(row=0, column=1)
 
-blurcap = 64
+blurcap = 25
 focusvar = StringVar()
 ogfocus = 0
 
@@ -375,9 +379,10 @@ def threadedZAxis():
 
 # calculates the blur and returns the blur number
 def calculateBlur():
-    global focus, blurry, blurcap, tracking
+    global focus, blurry, blurcap, tracking, x, y, w, h
     if tracking:
         image = vs.read()
+        image = image[y:y + h, x:x + w]
     else:
         image = vs.read()
 
@@ -521,7 +526,7 @@ def startTracking():
     # start OpenCV object tracker using the supplied bounding box
     tracker.init(frame, initBB)
     ser1.flush()
-    thread2.start()
+    # thread2.start()
     tracking = True
 
 
