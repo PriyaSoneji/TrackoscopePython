@@ -1,3 +1,4 @@
+# make sure bluetooth is off
 import tkinter as tk
 from tkinter import *
 from PIL import Image
@@ -8,9 +9,10 @@ import argparse
 import cv2
 from time import sleep
 import serial
+from serial import Serial
 import pyautogui
-import glob
 import torch
+import glob
 import numpy as np
 from imutils.video import VideoStream
 from imutils.video import FPS
@@ -57,18 +59,16 @@ centery = 0
 
 # flipping variables
 portopen = bool(False)
-horizder = bool(False)
-vertder = bool(True)
 rotate = bool(False)
 sendrepeat = bool(False)
 centered = bool(False)
 tracking = bool(False)
 
 # range limits
-xrangehl = 65
-xrangell = 35
-yrangehl = 65
-yrangell = 35
+xrangehl = 55
+xrangell = 45
+yrangehl = 55
+yrangell = 45
 
 # graphing stuff
 currx = 0
@@ -102,15 +102,21 @@ def variance_of_laplacian(image):
     return cv2.Laplacian(image, cv2.CV_64F).var()
 
 
-# button press commands
-def swapHorizontal():
-    global horizder
-    horizder = not horizder
+def fft_blur_detection(image, thresh):
+    (h, w) = image.shape
+    (cX, cY) = (int(w / 2.0), int(h / 2.0))
 
+    fft = np.fft.fft2(image)
+    fftShift = np.fft.fftshift(fft)
 
-def swapVertical():
-    global vertder
-    vertder = not vertder
+    fftShift[cY - 60:cY + 60, cX - 60:cX + 60] = 0
+    fftShift = np.fft.ifftshift(fftShift)
+    recon = np.fft.ifft2(fftShift)
+
+    magnitude = 20 * np.log(np.abs(recon))
+    mean = np.mean(magnitude)
+
+    return mean, mean <= thresh
 
 
 def savePlot():
@@ -129,17 +135,16 @@ panelB = None
 frame = None
 thread = None
 thread2 = None
-state = None
 stopEvent = threading.Event()
 
 
 # add points to the graph and updates plot
 def addpoint():
-    global count, countmax, figure1
+    global count, countmax, figure1, zval
     if count == countmax:
         x_values.append(currx)
         y_values.append(curry)
-        # plotgraph()
+        z_values.append(zval)
         count = 0
     count = count + 1
 
@@ -233,6 +238,12 @@ initBB = None
 
 
 def sendCommand(cmd):
+    global portopen, ser1, centered
+    if portopen:
+        ser1.write(cmd)
+
+
+def sendCommandT(cmd):
     global portopen, ser1
     if portopen:
         thread3 = threading.Thread(target=sendCommandThread, args=(cmd, ser1))
@@ -242,8 +253,7 @@ def sendCommand(cmd):
 # sends command to the Arduino over serial port
 def sendCommandThread(cmd, serport):
     serport.write(cmd)
-    if not centered:
-        serport.write(cmd)
+    print("sent command")
 
 
 fps = FPS().start()
@@ -329,7 +339,7 @@ def onClose():
     global initBB
     print("[INFO] closing...")
     cv2.destroyAllWindows()
-    sendCommand('S'.encode())
+    sendCommand('E'.encode())
     vs.stop()
     initBB = None
     stopEvent.set()
@@ -337,11 +347,14 @@ def onClose():
     sys.exit()
 
 
-# defines how to make a move depending on location of bounding box center
+# the micrometers per send
+incrementstepxy = 26.56
+
+
 # defines how to make a move depending on location of bounding box center
 def makemove():
     global smallx, largex, centerx, smally, largey, centery, newxdirection, oldxdirection, newydirection, \
-        oldydirection, ydirection, xdirection, x, y, w, h, W, H, currx, curry, centered
+        oldydirection, ydirection, xdirection, x, y, w, h, W, H, currx, curry, centered, incrementstepxy
     smallx = x
     largex = x + w
     centerx = (smallx + largex) / 2
@@ -351,55 +364,34 @@ def makemove():
 
     # Send X direction
     if ((centerx / W) * 100) > xrangehl:
-        if horizder:
-            newxdirection = 'L'
-            currx = currx - 1
-            addpoint()
-        else:
-            newxdirection = 'R'
-            currx = currx + 1
-            addpoint()
+        newxdirection = 'R'
+        currx = currx - incrementstepxy
+        addpoint()
     elif ((centerx / W) * 100) < xrangell:
-        if horizder:
-            newxdirection = 'R'
-            currx = currx + 1
-            addpoint()
-        else:
-            newxdirection = 'L'
-            currx = currx - 1
-            addpoint()
+        newxdirection = 'L'
+        currx = currx + incrementstepxy
+        addpoint()
     else:
         newxdirection = 'X'
 
     if oldxdirection != newxdirection:
         sendCommand(newxdirection.encode())
-        # ser1.flush()
         oldxdirection = newxdirection
 
     # Send Y direction
     if ((centery / H) * 100) > yrangehl:
-        if vertder:
-            newydirection = 'D'
-            curry = curry + 1
-            addpoint()
-        else:
-            newydirection = 'U'
-            curry = curry - 1
-            addpoint()
+        newydirection = 'D'
+        curry = curry - incrementstepxy
+        addpoint()
     elif ((centery / H) * 100) < yrangell:
-        if vertder:
-            newydirection = 'U'
-            curry = curry - 1
-            addpoint()
-        else:
-            newydirection = 'D'
-            curry = curry + 1
-            addpoint()
+        newydirection = 'U'
+        curry = curry + incrementstepxy
+        addpoint()
+
     else:
         newydirection = 'Y'
     if oldydirection != newydirection:
         sendCommand(newydirection.encode())
-        # ser1.flush()
         oldydirection = newydirection
 
     if (newydirection == 'Y') and (newxdirection == 'X'):
@@ -416,65 +408,105 @@ ax = figure1.add_subplot(111, projection='3d')
 bar1 = FigureCanvasTkAgg(figure1, root)
 bar1.get_tk_widget().grid(row=0, column=1)
 
+blurcap = 25
+focusvar = StringVar()
+ogfocus = 0
+
+
+def focusing():
+    global blurry
+    calculateBlur()
+    if blurry:
+        fixBlurMotor()
+
 
 def threadedZAxis():
     while not stopEvent.is_set():
         # Z-Axis Detection
-        determineFocus()
-        if blurry:
-            fixBlurMotor()
+        focusing()
+        sleep(2)
 
 
 # calculates the blur and returns the blur number
 def calculateBlur():
-    global focus
-    image = vs.read()
+    global focus, blurry, blurcap, tracking, x, y, w, h
+    if tracking:
+        image = vs.read()
+        image = image[y:y + h, x:x + w]
+    else:
+        image = vs.read()
+
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
     focus = round(variance_of_laplacian(gray), 2)
+    # focus = round(cv2.Laplacian(image, cv2.CV_64F).var(), 2)
+    if focus > blurcap:
+        blurry = bool(False)
+    else:
+        blurry = bool(True)
+
+    # (focus, blurry) = fft_blur_detection(gray, blurcap)
+    # focus = round(focus, 2)
+
+    setFocusLabel()
     return focus
 
 
-# determines if it is in focus or not
-def determineFocus():
-    global blurry
-    if calculateBlur() < 80:
-        blurry = bool(True)
-    else:
-        blurry = bool(False)
+updowncount = 0
+zval = 0
 
 
 # uses a motor to fix the blur
 def fixBlurMotor():
-    global originalFocus, compareFocus, rightDirection, focus, zdirection
-    originalFocus = calculateBlur()
+    global originalFocus, compareFocus, rightDirection, focus, zdirection, blurcap, ogfocus, updowncount, zval, incrementstepxy
+    rightDirection = bool(True)
     zdirection = 'b'
-    sendCommand(zdirection.encode())
-    compareFocus = calculateBlur()
-    if compareFocus > originalFocus:
-        rightDirection = bool(True)
-    else:
-        rightDirection = bool(False)
+    ogfocus = focus
+    originalFocus = focus
+    updowncount = zval
+    for j in range(20):
 
-    # sendCommand('S'.encode())
+        sleep(0.25)
+        compareFocus = calculateBlur()
 
-    if rightDirection:
-        for j in range(15):
-            zdirection = 'b'
+        if abs(compareFocus - originalFocus) > 0.5:
+            if compareFocus > originalFocus:
+                rightDirection = bool(True)
+            else:
+                rightDirection = bool(False)
+            originalFocus = focus
+        elif ((blurcap - compareFocus) - (blurcap - ogfocus)) > 1:
+            print("too far")
+            rightDirection = bool(False)
+
+        if not blurry:
+            print("focused now")
+            zdirection = 'S'
             sendCommand(zdirection.encode())
-            sleep(0.1)
-            if calculateBlur() > 80:
-                break
-    else:
-        for j in range(15):
-            zdirection = 't'
-            sendCommand(zdirection.encode())
-            sleep(0.1)
-            if calculateBlur() > 80:
-                break
+            break
 
-    determineFocus()
-    zdirection = 'Z'
-    sendCommand(zdirection.encode())
+        if not rightDirection:
+            print("Change")
+            if zdirection == 't':
+                zdirection = 'b'
+            else:
+                zdirection = 't'
+
+        if zdirection == 't':
+            updowncount = updowncount + incrementstepxy
+        else:
+            updowncount = updowncount - incrementstepxy
+
+        sendCommand(zdirection.encode())
+
+    zval = updowncount
+    addpoint()
+    print("ended")
+
+
+def setFocusLabel():
+    global focus, focusvar
+    focusvar.set("Focus: " + str(focus))
 
 
 def yPos():
@@ -494,15 +526,27 @@ def xNeg():
 
 
 def zPos():
-    sendCommand('T'.encode())
+    sendCommand('t'.encode())
 
 
 def zNeg():
-    sendCommand('B'.encode())
+    sendCommand('b'.encode())
 
 
 def stopMov():
     sendCommand('S'.encode())
+
+
+def hardStop():
+    sendCommand('E'.encode())
+    ser1.flush()
+
+
+def dataSave():
+    global z_values, y_values, x_values
+    data = np.array([x_values, y_values, z_values])
+    data = data.T
+    np.savetxt('vals.csv', data, delimiter = ',')
 
 
 # plots the graph using matplotlib
@@ -512,10 +556,10 @@ def plotgraph():
 
     # plot
     ax.plot(x_values, y_values, z_values)
-    ax.scatter(x_values, y_values, z_values)
-    ax.set_xlabel('X')
-    ax.set_ylabel('Y')
-    ax.set_zlabel('Z')
+    # ax.scatter(x_values, y_values, z_values)
+    ax.set_xlabel('X-Movement (μm)')
+    ax.set_ylabel('Y-Movement (μm)')
+    ax.set_zlabel('Z-Movement (μm)')
 
     # idle draw
     bar1.draw_idle()
@@ -552,12 +596,12 @@ def startTracking():
 # define the buttons and their commands
 startButton = Button(root, text="Start Tracking", command=startTracking, activebackground='yellow')
 plotButton = Button(root, text="Plot Graph", command=plotgraph, activebackground='yellow')
-hFlipButton = Button(root, text="Flip HorizDir", command=swapHorizontal, activebackground='yellow')
-vFlipButton = Button(root, text="Flip VertDir", command=swapVertical, activebackground='yellow')
-screenButton = Button(root, text="Screenshot", command=screenshot, activebackground='yellow')
-stopButton = Button(root, text="Quit", command=onClose, activebackground='yellow')
+zFocusButton = Button(root, text="Focus", command=focusing, activebackground='yellow')
 saveButton = Button(root, text="Save Plot", command=savePlot, activebackground='yellow')
-homeButton = Button(root, text="Check Blur", command=calculateBlur, activebackground='yellow')
+dataButton = Button(root, text="SaveData", command=dataSave, activebackground='yellow')
+stopButton = Button(root, text="Quit", command=onClose, activebackground='yellow')
+focusLabel = Label(root, textvariable=focusvar, font=("Times", 16))
+blurButton = Button(root, text="Check Blur", command=calculateBlur, activebackground='yellow')
 # buttons to control the movement
 yposButton = Button(root, text="Y+", command=yPos, activebackground='yellow')
 ynegButton = Button(root, text="Y-", command=yNeg, activebackground='yellow')
@@ -582,12 +626,12 @@ else:
 # place the buttons
 startButton.grid(row=1, column=0, sticky='WENS')
 plotButton.grid(row=1, column=1, sticky='WENS')
-hFlipButton.grid(row=2, column=0, sticky='WENS')
-vFlipButton.grid(row=2, column=1, sticky='WENS')
-screenButton.grid(row=3, column=0, sticky='WENS')
+zFocusButton.grid(row=2, column=0, sticky='WENS')
+saveButton.grid(row=2, column=1, sticky='WENS')
+dataButton.grid(row=3, column=0, sticky='WENS')
 stopButton.grid(row=3, column=1, sticky='WENS')
-saveButton.grid(row=4, column=0, sticky='WENS')
-homeButton.grid(row=4, column=1, sticky='WENS')
+focusLabel.grid(row=4, column=0, sticky='WENS')
+blurButton.grid(row=4, column=1, sticky='WENS')
 yposButton.grid(row=1, column=3, sticky='WENS')
 ynegButton.grid(row=3, column=3, sticky='WENS')
 xposButton.grid(row=2, column=4, sticky='WENS')
@@ -598,10 +642,10 @@ stopmovButton.grid(row=2, column=3, sticky='WENS')
 
 # start videoloop thread
 thread = threading.Thread(target=videoLoop, args=())
-# thread2 = threading.Thread(target=threadedZAxis, args=())
+thread2 = threading.Thread(target=threadedZAxis, args=())
 thread.start()
 
-root.wm_title("Trackoscope")
+root.wm_title("TrackoscopeRPN")
 
 # kick off the GUI
 root.mainloop()
