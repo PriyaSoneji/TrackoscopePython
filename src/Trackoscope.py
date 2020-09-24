@@ -53,10 +53,10 @@ centered = bool(False)
 tracking = bool(False)
 
 # range limits
-xrangehl = 60
-xrangell = 40
-yrangehl = 60
-yrangell = 40
+xrangehl = 55
+xrangell = 45
+yrangehl = 55
+yrangell = 45
 
 # graphing stuff
 currx = 0
@@ -297,14 +297,14 @@ def onClose():
     sys.exit()
 
 
-amountsent = 0
+# the micrometers per send
 incrementstepxy = 26.56
 
 
 # defines how to make a move depending on location of bounding box center
 def makemove():
     global smallx, largex, centerx, smally, largey, centery, newxdirection, oldxdirection, newydirection, \
-        oldydirection, ydirection, xdirection, x, y, w, h, W, H, currx, curry, centered, amountsent, incrementstepxy
+        oldydirection, ydirection, xdirection, x, y, w, h, W, H, currx, curry, centered, incrementstepxy
     smallx = x
     largex = x + w
     centerx = (smallx + largex) / 2
@@ -408,7 +408,7 @@ zval = 0
 
 # uses a motor to fix the blur
 def fixBlurMotor():
-    global originalFocus, compareFocus, rightDirection, focus, zdirection, blurcap, ogfocus, updowncount, zval
+    global originalFocus, compareFocus, rightDirection, focus, zdirection, blurcap, ogfocus, updowncount, zval, incrementstepxy
     rightDirection = bool(True)
     zdirection = 'b'
     ogfocus = focus
@@ -443,9 +443,9 @@ def fixBlurMotor():
                 zdirection = 't'
 
         if zdirection == 't':
-            updowncount = updowncount + 1
+            updowncount = updowncount + incrementstepxy
         else:
-            updowncount = updowncount - 1
+            updowncount = updowncount - incrementstepxy
 
         sendCommand(zdirection.encode())
 
@@ -492,6 +492,13 @@ def hardStop():
     ser1.flush()
 
 
+def dataSave():
+    global z_values, y_values, x_values
+    data = np.array([x_values, y_values, z_values])
+    data = data.T
+    np.savetxt('vals.csv', data, delimiter = ',')
+
+
 # plots the graph using matplotlib
 def plotgraph():
     # grab a reference to the image panels
@@ -499,10 +506,10 @@ def plotgraph():
 
     # plot
     ax.plot(x_values, y_values, z_values)
-    ax.scatter(x_values, y_values, z_values)
-    ax.set_xlabel('X')
-    ax.set_ylabel('Y')
-    ax.set_zlabel('Z')
+    # ax.scatter(x_values, y_values, z_values)
+    ax.set_xlabel('X-Movement (μm)')
+    ax.set_ylabel('Y-Movement (μm)')
+    ax.set_zlabel('Z-Movement (μm)')
 
     # idle draw
     bar1.draw_idle()
@@ -535,7 +542,7 @@ startButton = Button(root, text="Start Tracking", command=startTracking, activeb
 plotButton = Button(root, text="Plot Graph", command=plotgraph, activebackground='yellow')
 zFocusButton = Button(root, text="Focus", command=focusing, activebackground='yellow')
 saveButton = Button(root, text="Save Plot", command=savePlot, activebackground='yellow')
-screenButton = Button(root, text="Screenshot", command=screenshot, activebackground='yellow')
+dataButton = Button(root, text="SaveData", command=dataSave, activebackground='yellow')
 stopButton = Button(root, text="Quit", command=onClose, activebackground='yellow')
 focusLabel = Label(root, textvariable=focusvar, font=("Times", 16))
 blurButton = Button(root, text="Check Blur", command=calculateBlur, activebackground='yellow')
@@ -566,7 +573,7 @@ startButton.grid(row=1, column=0, sticky='WENS')
 plotButton.grid(row=1, column=1, sticky='WENS')
 zFocusButton.grid(row=2, column=0, sticky='WENS')
 saveButton.grid(row=2, column=1, sticky='WENS')
-screenButton.grid(row=3, column=0, sticky='WENS')
+dataButton.grid(row=3, column=0, sticky='WENS')
 stopButton.grid(row=3, column=1, sticky='WENS')
 focusLabel.grid(row=4, column=0, sticky='WENS')
 blurButton.grid(row=4, column=1, sticky='WENS')
