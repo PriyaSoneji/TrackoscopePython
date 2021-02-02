@@ -100,7 +100,7 @@ def swapVertical():
 
 
 def savePlot():
-    figure1.savefig('output.png')
+    figure1.savefig('outputvolvox1.png')
 
 
 def screenshot():

@@ -11,6 +11,7 @@ from time import sleep
 import serial
 from serial import Serial
 import pyautogui
+import pandas
 import glob
 import numpy as np
 from imutils.video import VideoStream
@@ -18,6 +19,8 @@ from imutils.video import FPS
 from pandas import DataFrame
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+import datetime
+import csv
 
 # define tracking variables
 x = 0
@@ -53,16 +56,14 @@ centered = bool(False)
 tracking = bool(False)
 
 # range limits
-xrangehl = 55
-xrangell = 45
-yrangehl = 55
-yrangell = 45
+xrangehl = 60
+xrangell = 40
+yrangehl = 60
+yrangell = 40
 
 # graphing stuff
 currx = 0
 curry = 0
-count = 0
-countmax = 10
 
 # Z-Axis
 zdirection = 'N'
@@ -75,12 +76,15 @@ compareFocus = 0
 x_values = []
 y_values = []
 z_values = []
+timestamps = []
 
 x_values.append(0)
 y_values.append(0)
 z_values.append(0)
 
 availvid = []
+
+trackinginZ = bool(False)
 
 
 # checks for bluriness
@@ -108,7 +112,7 @@ def fft_blur_detection(image, thresh):
 
 
 def savePlot():
-    figure1.savefig('output.png')
+    figure1.savefig('graph.png')
 
 
 def screenshot():
@@ -125,16 +129,28 @@ thread = None
 thread2 = None
 stopEvent = threading.Event()
 
+count = 0
+countmax = 10
+countgraph = 0
+countgraphmax = 30
+
 
 # add points to the graph and updates plot
 def addpoint():
-    global count, countmax, figure1, zval
+    global count, countmax, figure1, zval, countgraph, countgraphmax, timestamps
     if count == countmax:
-        x_values.append(currx)
-        y_values.append(curry)
-        z_values.append(zval)
+        x_values.append(round(currx, 2))
+        y_values.append(round(curry, 2))
+        z_values.append(round(zval, 2))
+        now = datetime.datetime.now()
+        timestamp = str(now.strftime("%H:%M:%S"))
+        timestamps.append(timestamp)
         count = 0
+    if countgraph == countgraphmax:
+        plotgraph()
+        countgraph = 0
     count = count + 1
+    countgraph = countgraph + 1
 
 
 # check for available serial ports
@@ -241,19 +257,25 @@ def videoLoop():
                 if success:
                     (x, y, w, h) = [int(v) for v in box]
                     centered = makemove()
-                    if centered:
-                        cv2.rectangle(frame, (x, y), (x + w, y + h),
-                                      (0, 255, 0), 2)
-                    else:
-                        cv2.rectangle(frame, (x, y), (x + w, y + h),
-                                      (0, 0, 255), 2)
+                    cv2.rectangle(frame, (x, y), (x + w, y + h),
+                                  (255, 0, 0), 2)
+                    # if centered:
+                    #     cv2.rectangle(frame, (x, y), (x + w, y + h),
+                    #                   (0, 255, 0), 2)
+                    # else:
+                    #     cv2.rectangle(frame, (x, y), (x + w, y + h),
+                    #                   (0, 0, 255), 2)
 
             fps.update()
             fps.stop()
 
+            now = datetime.datetime.now()
+            timestamp = str(now.strftime("%H:%M:%S"))
+
             # initialize info on screen
             info = [
-                ("FPS", "{:.2f}".format(fps.fps())),
+                ("Time", timestamp),
+                # ("FPS", "{:.2f}".format(fps.fps())),
                 ("X-Move", oldxdirection),
                 ("Y-Move", oldydirection)
             ]
@@ -298,7 +320,7 @@ def onClose():
 
 
 # the micrometers per send
-incrementstepxy = 26.56
+incrementstepxy = 43.12
 
 
 # defines how to make a move depending on location of bounding box center
@@ -314,12 +336,12 @@ def makemove():
 
     # Send X direction
     if ((centerx / W) * 100) > xrangehl:
-        newxdirection = 'R'
-        currx = currx - incrementstepxy
-        addpoint()
-    elif ((centerx / W) * 100) < xrangell:
         newxdirection = 'L'
         currx = currx + incrementstepxy
+        addpoint()
+    elif ((centerx / W) * 100) < xrangell:
+        newxdirection = 'R'
+        currx = currx - incrementstepxy
         addpoint()
     else:
         newxdirection = 'X'
@@ -354,11 +376,14 @@ def makemove():
 
 # figure one data
 figure1 = plt.Figure(figsize=(6, 5), dpi=100)
-ax = figure1.add_subplot(111, projection='3d')
+if trackinginZ:
+    ax = figure1.add_subplot(111, projection='3d')
+else:
+    ax = figure1.add_subplot(111)
 bar1 = FigureCanvasTkAgg(figure1, root)
 bar1.get_tk_widget().grid(row=0, column=1)
 
-blurcap = 25
+blurcap = 24
 focusvar = StringVar()
 ogfocus = 0
 
@@ -385,6 +410,8 @@ def calculateBlur():
         image = image[y:y + h, x:x + w]
     else:
         image = vs.read()
+
+    image = vs.read()
 
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
@@ -415,8 +442,7 @@ def fixBlurMotor():
     originalFocus = focus
     updowncount = zval
     for j in range(20):
-
-        sleep(0.25)
+        sleep(0.50)
         compareFocus = calculateBlur()
 
         if abs(compareFocus - originalFocus) > 0.5:
@@ -426,7 +452,7 @@ def fixBlurMotor():
                 rightDirection = bool(False)
             originalFocus = focus
         elif ((blurcap - compareFocus) - (blurcap - ogfocus)) > 1:
-            print("too far")
+            # print("too far")
             rightDirection = bool(False)
 
         if not blurry:
@@ -436,7 +462,7 @@ def fixBlurMotor():
             break
 
         if not rightDirection:
-            print("Change")
+            # print("Change")
             if zdirection == 't':
                 zdirection = 'b'
             else:
@@ -468,11 +494,11 @@ def yNeg():
 
 
 def xPos():
-    sendCommand('R'.encode())
+    sendCommand('L'.encode())
 
 
 def xNeg():
-    sendCommand('L'.encode())
+    sendCommand('R'.encode())
 
 
 def zPos():
@@ -493,23 +519,33 @@ def hardStop():
 
 
 def dataSave():
-    global z_values, y_values, x_values
-    data = np.array([x_values, y_values, z_values])
-    data = data.T
-    np.savetxt('vals.csv', data, delimiter = ',')
+    global z_values, y_values, x_values, trackinginZ, timestamps
+    if trackinginZ:
+        df = pandas.DataFrame(data={"xval": x_values, "yval": y_values, "zval": z_values, "times": timestamps})
+        df.to_csv("./trackingvals.csv", sep=',', index=False)
+    else:
+        df = pandas.DataFrame(data={"xval": x_values, "yval": y_values, "times": timestamps})
+        df.to_csv("./trackingvals.csv", sep=',', index=False)
+    print(x_values)
+    print(y_values)
 
 
 # plots the graph using matplotlib
 def plotgraph():
     # grab a reference to the image panels
-    global panelA, figure1, ax, root, x_values, y_values, z_values
+    global panelA, figure1, ax, root, x_values, y_values, z_values, trackinginZ
 
     # plot
-    ax.plot(x_values, y_values, z_values)
-    # ax.scatter(x_values, y_values, z_values)
-    ax.set_xlabel('X-Movement (μm)')
-    ax.set_ylabel('Y-Movement (μm)')
-    ax.set_zlabel('Z-Movement (μm)')
+    if trackinginZ:
+        ax.plot(x_values, y_values, z_values)
+        # ax.scatter(x_values, y_values, z_values)
+        ax.set_xlabel('X-Movement (μm)')
+        ax.set_ylabel('Y-Movement (μm)')
+        ax.set_zlabel('Z-Movement (μm)')
+    else:
+        ax.plot(x_values, y_values)
+        ax.set_xlabel('X-Movement (μm)')
+        ax.set_ylabel('Y-Movement (μm)')
 
     # idle draw
     bar1.draw_idle()
@@ -526,14 +562,20 @@ def testDevice(source):
 
 # starts tracking and prompts user to select the object that they wish to track
 def startTracking():
-    global frame, initBB, tracker, tracking, thread2, ser1
+    global frame, initBB, tracker, tracking, thread2, ser1, timestamps
     # if the 's' key is selected start tracking
     initBB = cv2.selectROI('Selection', frame, showCrosshair=True)
     cv2.destroyWindow('Selection')
     # start OpenCV object tracker using the supplied bounding box
     tracker.init(frame, initBB)
     ser1.flush()
-    # thread2.start()
+    if trackinginZ:
+        thread2.start()
+
+    now = datetime.datetime.now()
+    timestamp = str(now.strftime("%H:%M:%S"))
+    timestamps.append(timestamp)
+
     tracking = True
 
 

@@ -120,7 +120,7 @@ def fft_blur_detection(image, thresh):
 
 
 def savePlot():
-    figure1.savefig('output.png')
+    figure1.savefig('outputvolvox1.png')
 
 
 def screenshot():
@@ -546,7 +546,7 @@ def dataSave():
     global z_values, y_values, x_values
     data = np.array([x_values, y_values, z_values])
     data = data.T
-    np.savetxt('vals.csv', data, delimiter = ',')
+    np.savetxt('valsvolvox1.csv', data, delimiter = ',')
 
 
 # plots the graph using matplotlib

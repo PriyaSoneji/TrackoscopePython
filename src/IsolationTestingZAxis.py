@@ -88,7 +88,7 @@ def variance_of_laplacian(image):
 
 
 def savePlot():
-    figure1.savefig('output.png')
+    figure1.savefig('outputvolvox1.png')
 
 
 def screenshot():
