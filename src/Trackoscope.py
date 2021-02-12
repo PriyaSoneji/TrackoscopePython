@@ -187,31 +187,10 @@ if len(availableport) > 0:
     sleep(2)
     portopen = True
 
-# construct the argument parser for opencv and parse the arguments
-ap = argparse.ArgumentParser()
-ap.add_argument("-v", "--video", type=str,
-                help="path to input video file")
-ap.add_argument("-t", "--tracker", type=str, default="csrt",
-                help="OpenCV object tracker type")
-args = vars(ap.parse_args())
-
-# extract the OpenCV version info
-(major, minor) = cv2.__version__.split(".")[:2]
 
 # function to create our object tracker
-# OpenCV object tracker implementations
-OPENCV_OBJECT_TRACKERS = {
-    "csrt": cv2.TrackerCSRT_create,
-    "kcf": cv2.TrackerKCF_create,
-    "boosting": cv2.TrackerBoosting_create,
-    "mil": cv2.TrackerMIL_create,
-    "tld": cv2.TrackerTLD_create,
-    "medianflow": cv2.TrackerMedianFlow_create,
-    "mosse": cv2.TrackerMOSSE_create
-}
 
-# OpenCV object tracker objects
-tracker = OPENCV_OBJECT_TRACKERS[args["tracker"]]()
+tracker = cv2.TrackerCSRT_create()
 
 # initialize the bounding box coordinates
 initBB = None
@@ -569,6 +548,7 @@ def startTracking():
     # start OpenCV object tracker using the supplied bounding box
     tracker.init(frame, initBB)
     ser1.flush()
+
     if trackinginZ:
         thread2.start()
 
@@ -598,17 +578,14 @@ znegButton = Button(root, text="Z-", command=zNeg, activebackground='yellow')
 stopmovButton = Button(root, text="S", command=stopMov, activebackground='yellow')
 
 # if a video path was not supplied, grab the reference to the web cam
-if not args.get("video", False):
-    print("[INFO] starting video stream...")
-    for x in range(3):
-        if testDevice(x):
-            availvid.append(x)
-    vs = VideoStream(src=(availvid[len(availvid) - 1])).start()
-    # vs = VideoStream(src=0).start()
-    sleep(1.0)
-# otherwise, grab a reference to the video file
-else:
-    vs = cv2.VideoCapture(args["video"])
+
+print("[INFO] starting video stream...")
+for x in range(3):
+    if testDevice(x):
+        availvid.append(x)
+vs = VideoStream(src=(availvid[len(availvid) - 1])).start()
+# vs = VideoStream(src=0).start()
+sleep(1.0)
 
 # place the buttons
 startButton.grid(row=1, column=0, sticky='WENS')
