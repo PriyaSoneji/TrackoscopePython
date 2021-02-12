@@ -257,14 +257,14 @@ def videoLoop():
                 if success:
                     (x, y, w, h) = [int(v) for v in box]
                     centered = makemove()
-                    cv2.rectangle(frame, (x, y), (x + w, y + h),
-                                  (255, 0, 0), 2)
-                    # if centered:
-                    #     cv2.rectangle(frame, (x, y), (x + w, y + h),
-                    #                   (0, 255, 0), 2)
-                    # else:
-                    #     cv2.rectangle(frame, (x, y), (x + w, y + h),
-                    #                   (0, 0, 255), 2)
+
+                    # cv2.rectangle(frame, (x, y), (x + w, y + h),
+                    #               (0, 255, 0), 2)
+
+                    if centered:
+                        cv2.circle(frame, (x + int(w / 2), y + int(h / 2)), 1, (0, 255, 0), 2)
+                    else:
+                        cv2.circle(frame, (x + int(w / 2), y + int(h / 2)), 1, (0, 0, 255), 2)
 
             fps.update()
             fps.stop()
