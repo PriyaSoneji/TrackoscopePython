@@ -54,6 +54,9 @@ rotate = bool(False)
 sendrepeat = bool(False)
 centered = bool(False)
 tracking = bool(False)
+trackingsuccess = bool(False)
+showOverlay = bool(True)
+speedMode = bool(False)
 
 # range limits
 xrangehl = 60
@@ -187,7 +190,6 @@ if len(availableport) > 0:
     sleep(2)
     portopen = True
 
-
 # function to create our object tracker
 
 tracker = cv2.TrackerCSRT_create()
@@ -216,10 +218,11 @@ def sendCommandThread(cmd, serport):
 
 
 fps = FPS().start()
+infovar = StringVar()
 
 
 def videoLoop():
-    global vs, panelB, frame, initBB, x, y, w, h, H, W, centered, fps
+    global vs, panelB, frame, initBB, x, y, w, h, H, W, centered, fps, trackingsuccess, centerx, centery, showOverlay
     try:
         # keep looping over frames until we are instructed to stop
         while not stopEvent.is_set():
@@ -233,17 +236,35 @@ def videoLoop():
             if initBB is not None:
                 # grab the new bounding box coordinates of the object
                 (success, box) = tracker.update(frame)
-                if success:
+                (x, y, w, h) = [int(v) for v in box]
+
+                trackingsuccess = success
+                centerx = x + int(w / 2)
+                centery = y + int(h / 2)
+
+                if centerx > 585 or centerx < 15:
+                    trackingsuccess = bool(False)
+                if centery > 435 or centery < 15:
+                    trackingsuccess = bool(False)
+
+                if not trackingsuccess:
+                    (success, box) = tracker.update(frame)
                     (x, y, w, h) = [int(v) for v in box]
+
+                if not success:
+                    infovar.set("Tracking Unsuccessful")
+
+                if success:
                     centered = makemove()
 
                     # cv2.rectangle(frame, (x, y), (x + w, y + h),
                     #               (0, 255, 0), 2)
 
-                    if centered:
-                        cv2.circle(frame, (x + int(w / 2), y + int(h / 2)), 1, (0, 255, 0), 2)
-                    else:
-                        cv2.circle(frame, (x + int(w / 2), y + int(h / 2)), 1, (0, 0, 255), 2)
+                    if showOverlay:
+                        if centered:
+                            cv2.circle(frame, (x + int(w / 2), y + int(h / 2)), 1, (0, 255, 0), 2)
+                        else:
+                            cv2.circle(frame, (x + int(w / 2), y + int(h / 2)), 1, (0, 0, 255), 2)
 
             fps.update()
             fps.stop()
@@ -253,10 +274,10 @@ def videoLoop():
 
             # initialize info on screen
             info = [
-                ("Time", timestamp),
+                ("Time", timestamp)
                 # ("FPS", "{:.2f}".format(fps.fps())),
-                ("X-Move", oldxdirection),
-                ("Y-Move", oldydirection)
+                # ("X-Move", oldxdirection),
+                # ("Y-Move", oldydirection),
             ]
 
             for (i, (k, v)) in enumerate(info):
@@ -304,14 +325,11 @@ incrementstepxy = 43.12
 
 # defines how to make a move depending on location of bounding box center
 def makemove():
-    global smallx, largex, centerx, smally, largey, centery, newxdirection, oldxdirection, newydirection, \
-        oldydirection, ydirection, xdirection, x, y, w, h, W, H, currx, curry, centered, incrementstepxy
-    smallx = x
-    largex = x + w
-    centerx = (smallx + largex) / 2
-    smally = y
-    largey = y + h
-    centery = (smally + largey) / 2
+    global centerx, centery, newxdirection, oldxdirection, newydirection, oldydirection, ydirection, \
+        xdirection, x, y, w, h, W, H, currx, curry, centered, incrementstepxy, trackingsuccess, speedMode
+
+    centerx = x + int(w / 2)
+    centery = y + int(h / 2)
 
     # Send X direction
     if ((centerx / W) * 100) > xrangehl:
@@ -338,14 +356,21 @@ def makemove():
         newydirection = 'U'
         curry = curry + incrementstepxy
         addpoint()
-
     else:
         newydirection = 'Y'
+
     if oldydirection != newydirection:
         sendCommand(newydirection.encode())
         oldydirection = newydirection
 
+    if not trackingsuccess:
+        oldydirection = 'Y'
+        oldxdirection = 'X'
+        sendCommand('E'.encode())
+
     if (newydirection == 'Y') and (newxdirection == 'X'):
+        if not speedMode:
+            sendCommand('E'.encode())
         centered = True
     else:
         centered = False
@@ -363,7 +388,6 @@ bar1 = FigureCanvasTkAgg(figure1, root)
 bar1.get_tk_widget().grid(row=0, column=1)
 
 blurcap = 24
-focusvar = StringVar()
 ogfocus = 0
 
 
@@ -460,8 +484,8 @@ def fixBlurMotor():
 
 
 def setFocusLabel():
-    global focus, focusvar
-    focusvar.set("Focus: " + str(focus))
+    global focus, infovar
+    infovar.set("Focus: " + str(focus))
 
 
 def yPos():
@@ -489,12 +513,30 @@ def zNeg():
 
 
 def stopMov():
-    sendCommand('S'.encode())
+    sendCommand('E'.encode())
 
 
 def hardStop():
     sendCommand('E'.encode())
     ser1.flush()
+
+
+def changeOveraly():
+    global showOverlay
+    showOverlay = not showOverlay
+    if showOverlay:
+        infovar.set("Showing Tracker")
+    else:
+        infovar.set("Just Showing Video")
+
+
+def changeSpeedMode():
+    global speedMode
+    speedMode = not speedMode
+    if speedMode:
+        infovar.set("Set to Optimal Speed")
+    else:
+        infovar.set("Now Full Stop in Between")
 
 
 def dataSave():
@@ -505,8 +547,6 @@ def dataSave():
     else:
         df = pandas.DataFrame(data={"xval": x_values, "yval": y_values, "times": timestamps})
         df.to_csv("./trackingvals.csv", sep=',', index=False)
-    print(x_values)
-    print(y_values)
 
 
 # plots the graph using matplotlib
@@ -514,15 +554,18 @@ def plotgraph():
     # grab a reference to the image panels
     global panelA, figure1, ax, root, x_values, y_values, z_values, trackinginZ
 
+    ax.cla()
+
     # plot
     if trackinginZ:
-        ax.plot(x_values, y_values, z_values)
-        # ax.scatter(x_values, y_values, z_values)
+        ax.plot(x_values, y_values, z_values, color='black', linestyle='solid', marker='+',
+                markerfacecolor='blue', markevery=[-1])
         ax.set_xlabel('X-Movement (μm)')
         ax.set_ylabel('Y-Movement (μm)')
         ax.set_zlabel('Z-Movement (μm)')
     else:
-        ax.plot(x_values, y_values)
+        ax.plot(x_values, y_values, color='green', linestyle='solid', marker='H',
+                markerfacecolor='blue', markersize=8, markevery=[-1])
         ax.set_xlabel('X-Movement (μm)')
         ax.set_ylabel('Y-Movement (μm)')
 
@@ -541,7 +584,7 @@ def testDevice(source):
 
 # starts tracking and prompts user to select the object that they wish to track
 def startTracking():
-    global frame, initBB, tracker, tracking, thread2, ser1, timestamps
+    global frame, initBB, tracker, tracking, thread2, ser1, timestamps, infovar
     # if the 's' key is selected start tracking
     initBB = cv2.selectROI('Selection', frame, showCrosshair=True)
     cv2.destroyWindow('Selection')
@@ -556,6 +599,8 @@ def startTracking():
     timestamp = str(now.strftime("%H:%M:%S"))
     timestamps.append(timestamp)
 
+    infovar.set("Tracking Started")
+
     tracking = True
 
 
@@ -563,11 +608,11 @@ def startTracking():
 startButton = Button(root, text="Start Tracking", command=startTracking, activebackground='yellow')
 plotButton = Button(root, text="Plot Graph", command=plotgraph, activebackground='yellow')
 zFocusButton = Button(root, text="Focus", command=focusing, activebackground='yellow')
-saveButton = Button(root, text="Save Plot", command=savePlot, activebackground='yellow')
-dataButton = Button(root, text="SaveData", command=dataSave, activebackground='yellow')
-stopButton = Button(root, text="Quit", command=onClose, activebackground='yellow')
-focusLabel = Label(root, textvariable=focusvar, font=("Times", 16))
+speedButton = Button(root, text="Change Speed Mode", command=changeSpeedMode, activebackground='yellow')
+dataButton = Button(root, text="Save Data", command=dataSave, activebackground='yellow')
+hideButton = Button(root, text="Change Overlay", command=changeOveraly, activebackground='yellow')
 blurButton = Button(root, text="Check Blur", command=calculateBlur, activebackground='yellow')
+infoLabel = Label(root, textvariable=infovar, font=("Times", 16))
 # buttons to control the movement
 yposButton = Button(root, text="Y+", command=yPos, activebackground='yellow')
 ynegButton = Button(root, text="Y-", command=yNeg, activebackground='yellow')
@@ -591,10 +636,9 @@ sleep(1.0)
 startButton.grid(row=1, column=0, sticky='WENS')
 plotButton.grid(row=1, column=1, sticky='WENS')
 zFocusButton.grid(row=2, column=0, sticky='WENS')
-saveButton.grid(row=2, column=1, sticky='WENS')
+speedButton.grid(row=2, column=1, sticky='WENS')
 dataButton.grid(row=3, column=0, sticky='WENS')
-stopButton.grid(row=3, column=1, sticky='WENS')
-focusLabel.grid(row=4, column=0, sticky='WENS')
+hideButton.grid(row=3, column=1, sticky='WENS')
 blurButton.grid(row=4, column=1, sticky='WENS')
 yposButton.grid(row=1, column=3, sticky='WENS')
 ynegButton.grid(row=3, column=3, sticky='WENS')
@@ -603,6 +647,7 @@ xnegButton.grid(row=2, column=2, sticky='WENS')
 zposButton.grid(row=4, column=4, sticky='WENS')
 znegButton.grid(row=4, column=2, sticky='WENS')
 stopmovButton.grid(row=2, column=3, sticky='WENS')
+infoLabel.grid(row=4, column=0, sticky='WENS')
 
 # start videoloop thread
 thread = threading.Thread(target=videoLoop, args=())
