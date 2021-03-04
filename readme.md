@@ -2,11 +2,11 @@
   
 ## Descriptions of Each Program:
 
+### Trackoscope.py (MAIN PROGRAM)
+This program is to be run on a laptop. It has the full object-tracking capability and has a user-friendly GUI.
+
 ### AutoFocus.py
 This program is to be run on a Raspberry Pi. Uses Picamera library and the Arducam Autofocus Replacement on the Raspberry Pi V2 Camera to autofocus and capture the most focused image.
-
-### Trackoscope.py
-This program is to be run on a laptop. It has the full object-tracking capability and has a user-friendly GUI. This is the main program.
 
 ### TrackoscopeRPN.py
 This program is to be run on a laptop. It has the full object-tracking capability and has a user-friendly GUI. Opposed to the csrt tracker, this uses a faster neural net tracker (DiSiamRPN)
@@ -38,8 +38,6 @@ Open a command prompt and then install the dependencies to get it working.
 * Arduino Uno
 * CNC Shield
 * 3 NEMA 17 Stepper Motors
-* Raspberry Pi
-* Pi Camera
 * Webcam/USB Camera
 
 
