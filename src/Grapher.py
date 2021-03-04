@@ -1,20 +1,66 @@
+import numpy as np
 import matplotlib.pyplot as plt
-import csv
+import matplotlib.animation as animation
+from matplotlib import cm
+import matplotlib.collections as mcoll
+import matplotlib.path as mpath
+import pandas as pd
+import mplcursors
 
-x = []
-y = []
 
-with open('csvfile1.txt', 'r') as csvfile:
-    plots = csv.reader(csvfile, delimiter=',')
-    for row in plots:
-        x.append(int(row[0]))
-        y.append(int(row[1]))
+def colorline(
+        x, y, z=None, cmap=plt.get_cmap('copper'), norm=plt.Normalize(0.0, 1.0),
+        linewidth=3, alpha=1.0):
+    # Default colors equally spaced on [0,1]:
+    if z is None:
+        z = np.linspace(0.0, 1.0, len(x))
 
-plt.plot(x, y, marker='o')
+    # Special case if a single number:
+    if not hasattr(z, "__iter__"):  # to check for numerical input -- this is a hack
+        z = np.array([z])
 
-plt.title('Data from the CSV File: People and Expenses')
+    z = np.asarray(z)
 
-plt.xlabel('Number of People')
-plt.ylabel('Expenses')
+    segments = make_segments(x, y)
+    lc = mcoll.LineCollection(segments, array=z, cmap=cmap, norm=norm,
+                              linewidth=linewidth, alpha=alpha)
+
+    ax = plt.gca()
+    ax.add_collection(lc)
+
+    return lc
+
+
+def make_segments(x, y):
+    points = np.array([x, y]).T.reshape(-1, 1, 2)
+    segments = np.concatenate([points[:-1], points[1:]], axis=1)
+    return segments
+
+
+csvfile = 'CSVFiles/Tardigrade7hrTrack.csv'
+
+df = pd.read_csv(csvfile)
+data = np.genfromtxt(csvfile, delimiter=',', names=['x', 'y'])
+x = data['x']
+y = data['y']
+tv = np.cos(x)
+
+fig = plt.figure(figsize=(8, 6))
+ax = fig.add_subplot(111)
+
+# path = mpath.Path(np.column_stack([x, y]))
+# verts = path.interpolated(steps=3).vertices
+# x, y = verts[:, 0], verts[:, 1]
+# z = np.linspace(0, 1, len(x))
+# colorline(x, y, z, cmap=plt.get_cmap('jet'), linewidth=2)
+
+for i in range(10):
+    colorline(x, y, cmap='cubehelix', linewidth=1)
+
+# plt.plot(x, y)
+
+# plt.scatter(x, y, c=tv)
+
+mplcursors.cursor()
 
 plt.show()
