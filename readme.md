@@ -5,6 +5,9 @@
 ### Trackoscope.py (MAIN PROGRAM)
 This program is to be run on a laptop. It has the full object-tracking capability and has a user-friendly GUI.
 
+### Grapher.py
+Taking CSV data and converting to meaningful graphs
+
 ### AutoFocus.py
 This program is to be run on a Raspberry Pi. Uses Picamera library and the Arducam Autofocus Replacement on the Raspberry Pi V2 Camera to autofocus and capture the most focused image.
 
@@ -19,12 +22,6 @@ This program is to be run on a Raspberry Pi. It has limited object-tracking capa
 
 ### NonGUITracking.py
 This program is to be run on a laptop. It is the earliest stage of object-tracking.
-
-### IsolationTestingZAxis.py
-Tests functionality of the z axis to help with integration.
-
-### IsolationTestingTracking.py
-Tests the tracking and monitors fps for debugging.
 
 ## Getting Started
 This project uses python virtual environments
