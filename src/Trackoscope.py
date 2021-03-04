@@ -56,7 +56,7 @@ centered = bool(False)
 tracking = bool(False)
 trackingsuccess = bool(False)
 showOverlay = bool(True)
-speedMode = bool(False)
+speedMode = bool(True)
 
 # range limits
 xrangehl = 60
@@ -84,6 +84,10 @@ timestamps = []
 x_values.append(0)
 y_values.append(0)
 z_values.append(0)
+
+now = datetime.datetime.now()
+timestamp = str(now.strftime("%H:%M:%S"))
+timestamps.append(timestamp)
 
 availvid = []
 
@@ -222,7 +226,7 @@ infovar = StringVar()
 
 
 def videoLoop():
-    global vs, panelB, frame, initBB, x, y, w, h, H, W, centered, fps, trackingsuccess, centerx, centery, showOverlay
+    global vs, panelB, frame, initBB, x, y, w, h, H, W, centered, fps, trackingsuccess, centerx, centery, showOverlay, oldxdirection, oldydirection
     try:
         # keep looping over frames until we are instructed to stop
         while not stopEvent.is_set():
@@ -250,6 +254,9 @@ def videoLoop():
                 if not trackingsuccess:
                     (success, box) = tracker.update(frame)
                     (x, y, w, h) = [int(v) for v in box]
+                    sendCommand('S'.encode())
+                    oldxdirection = 'X'
+                    oldydirection = 'Y'
 
                 if not success:
                     infovar.set("Tracking Unsuccessful")
@@ -320,7 +327,8 @@ def onClose():
 
 
 # the micrometers per send
-incrementstepxy = 43.12
+basestepsize = 86.24
+incrementstepxy = basestepsize/16
 
 
 # defines how to make a move depending on location of bounding box center
@@ -333,11 +341,11 @@ def makemove():
 
     # Send X direction
     if ((centerx / W) * 100) > xrangehl:
-        newxdirection = 'L'
+        newxdirection = 'R'
         currx = currx + incrementstepxy
         addpoint()
     elif ((centerx / W) * 100) < xrangell:
-        newxdirection = 'R'
+        newxdirection = 'L'
         currx = currx - incrementstepxy
         addpoint()
     else:
@@ -349,11 +357,11 @@ def makemove():
 
     # Send Y direction
     if ((centery / H) * 100) > yrangehl:
-        newydirection = 'D'
+        newydirection = 'U'
         curry = curry - incrementstepxy
         addpoint()
     elif ((centery / H) * 100) < yrangell:
-        newydirection = 'U'
+        newydirection = 'D'
         curry = curry + incrementstepxy
         addpoint()
     else:
@@ -366,7 +374,6 @@ def makemove():
     if not trackingsuccess:
         oldydirection = 'Y'
         oldxdirection = 'X'
-        sendCommand('E'.encode())
 
     if (newydirection == 'Y') and (newxdirection == 'X'):
         if not speedMode:
@@ -374,6 +381,11 @@ def makemove():
         centered = True
     else:
         centered = False
+
+    if abs(currx) > 100000 or abs(curry) > 100000:
+        hardStop()
+        dataSave()
+        onClose()
 
     return centered
 
@@ -489,19 +501,19 @@ def setFocusLabel():
 
 
 def yPos():
-    sendCommand('U'.encode())
-
-
-def yNeg():
     sendCommand('D'.encode())
 
 
+def yNeg():
+    sendCommand('U'.encode())
+
+
 def xPos():
-    sendCommand('L'.encode())
+    sendCommand('R'.encode())
 
 
 def xNeg():
-    sendCommand('R'.encode())
+    sendCommand('L'.encode())
 
 
 def zPos():
@@ -513,7 +525,7 @@ def zNeg():
 
 
 def stopMov():
-    sendCommand('E'.encode())
+    sendCommand('S'.encode())
 
 
 def hardStop():
@@ -584,7 +596,7 @@ def testDevice(source):
 
 # starts tracking and prompts user to select the object that they wish to track
 def startTracking():
-    global frame, initBB, tracker, tracking, thread2, ser1, timestamps, infovar
+    global frame, initBB, tracker, tracking, thread2, ser1, infovar
     # if the 's' key is selected start tracking
     initBB = cv2.selectROI('Selection', frame, showCrosshair=True)
     cv2.destroyWindow('Selection')
@@ -594,10 +606,6 @@ def startTracking():
 
     if trackinginZ:
         thread2.start()
-
-    now = datetime.datetime.now()
-    timestamp = str(now.strftime("%H:%M:%S"))
-    timestamps.append(timestamp)
 
     infovar.set("Tracking Started")
 
