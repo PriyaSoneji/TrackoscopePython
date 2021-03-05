@@ -16,8 +16,14 @@ data = np.genfromtxt(csvfile, delimiter=',', names=['x', 'y'])
 x = data['x']
 y = data['y']
 
-tv = []
-print(get_sec(df.max()[2]) - get_sec(df.min()[2]))
+timev = []
+mint = get_sec(df.min()[2])
+maxt = get_sec(df.max()[2])
+timediff = maxt - mint
+
+# converts the times to value between 0 and 255 so can do rgb
+for index, row in df.iterrows():
+    timev.append(round((255 / timediff) * ((get_sec(row['time'])) - mint), 2))
 
 dydx = np.cos(0.5 * (x[:-1] + x[1:]))  # first derivative
 

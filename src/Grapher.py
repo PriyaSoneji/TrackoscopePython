@@ -11,6 +11,21 @@ csvfile = 'CSVFiles/Tardigrade7hrTrack.csv'
 df = pd.read_csv(csvfile)
 
 
+def get_sec(time_str):
+    h, m, s = time_str.split(':')
+    return int(h) * 3600 + int(m) * 60 + int(s)
+
+
+timev = []
+mint = get_sec(df.min()[2])
+maxt = get_sec(df.max()[2])
+timediff = maxt - mint
+
+# converts the times to value between 0 and 255 so can do rgb
+for index, row in df.iterrows():
+    timev.append(round((255 / timediff) * ((get_sec(row['time'])) - mint), 2))
+
+
 def colorline(
         x, y, z=None, cmap=plt.get_cmap('copper'), norm=plt.Normalize(0.0, 1.0),
         linewidth=3, alpha=1.0):
@@ -47,24 +62,11 @@ x = data['x']
 y = data['y']
 # tv = np.cos(x)
 
-print(df.max())
-print(df.min())
-
 fig = plt.figure(figsize=(8, 6))
 ax = fig.add_subplot(111)
 
-# path = mpath.Path(np.column_stack([x, y]))
-# verts = path.interpolated(steps=3).vertices
-# x, y = verts[:, 0], verts[:, 1]
-# z = np.linspace(0, 1, len(x))
-# colorline(x, y, z, cmap=plt.get_cmap('jet'), linewidth=2)
-
 for i in range(10):
     colorline(x, y, cmap='cubehelix', linewidth=1)
-
-# plt.plot(x, y)
-
-# plt.scatter(x, y, c=tv)
 
 mplcursors.cursor()
 
