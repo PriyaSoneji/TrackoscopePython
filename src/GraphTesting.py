@@ -5,6 +5,8 @@ from matplotlib.colors import ListedColormap, BoundaryNorm
 import pandas as pd
 
 
+# reference code: https://matplotlib.org/stable/gallery/lines_bars_and_markers/multicolored_line.html
+
 def get_sec(time_str):
     h, m, s = time_str.split(':')
     return int(h) * 3600 + int(m) * 60 + int(s)
@@ -34,29 +36,28 @@ dydx = np.cos(0.5 * (x[:-1] + x[1:]))  # first derivative
 points = np.array([x, y]).T.reshape(-1, 1, 2)
 segments = np.concatenate([points[:-1], points[1:]], axis=1)
 
-fig, axs = plt.subplots(2, 1, sharex=True, sharey=True)
-# fig = plt.figure(figsize=(8, 6))
-# ax = fig.add_subplot(111)
+fig = plt.figure(figsize=(8, 6))
+ax = fig.add_subplot(111)
 
 # Create a continuous norm to map from data points to colors
 norm = plt.Normalize(dydx.min(), dydx.max())
-lc = LineCollection(segments, cmap='viridis', norm=norm)
+lc = LineCollection(segments, cmap='copper', norm=norm)
 # Set the values used for colormapping
 lc.set_array(dydx)
 lc.set_linewidth(2)
-line = axs[0].add_collection(lc)
-fig.colorbar(line, ax=axs[0])
+line = ax.add_collection(lc)
+fig.colorbar(line, ax=ax)
 
 # Use a boundary norm instead
-cmap = ListedColormap(['r', 'g', 'b'])
-norm = BoundaryNorm([-1, -0.5, 0.5, 1], cmap.N)
-lc = LineCollection(segments, cmap=cmap, norm=norm)
-lc.set_array(dydx)
-lc.set_linewidth(2)
-line = axs[1].add_collection(lc)
-fig.colorbar(line, ax=axs[1])
+# cmap = ListedColormap(['r', 'g', 'b'])
+# norm = BoundaryNorm([-1, -0.5, 0.5, 1], cmap.N)
+# lc = LineCollection(segments, cmap=cmap, norm=norm)
+# lc.set_array(dydx)
+# lc.set_linewidth(2)
+# line = ax.add_collection(lc)
+# fig.colorbar(line, ax=ax)
 
-axs[0].set_xlim(df.min()[0] - 500, df.max()[0] + 500)
-axs[0].set_ylim(df.min()[1] - 500, df.max()[1] + 500)
+ax.set_xlim(df.min()[0] - 500, df.max()[0] + 500)
+ax.set_ylim(df.min()[1] - 500, df.max()[1] + 500)
 
 plt.show()
