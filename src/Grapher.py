@@ -7,6 +7,9 @@ import matplotlib.path as mpath
 import pandas as pd
 import mplcursors
 
+csvfile = 'CSVFiles/Tardigrade7hrTrack.csv'
+df = pd.read_csv(csvfile)
+
 
 def colorline(
         x, y, z=None, cmap=plt.get_cmap('copper'), norm=plt.Normalize(0.0, 1.0),
@@ -26,6 +29,8 @@ def colorline(
                               linewidth=linewidth, alpha=alpha)
 
     ax = plt.gca()
+    ax.set_xlim(df.min()[0] - 500, df.max()[0] + 500)
+    ax.set_ylim(df.min()[1] - 500, df.max()[1] + 500)
     ax.add_collection(lc)
 
     return lc
@@ -37,13 +42,13 @@ def make_segments(x, y):
     return segments
 
 
-csvfile = 'CSVFiles/Tardigrade7hrTrack.csv'
-
-df = pd.read_csv(csvfile)
 data = np.genfromtxt(csvfile, delimiter=',', names=['x', 'y'])
 x = data['x']
 y = data['y']
-tv = np.cos(x)
+# tv = np.cos(x)
+
+print(df.max())
+print(df.min())
 
 fig = plt.figure(figsize=(8, 6))
 ax = fig.add_subplot(111)

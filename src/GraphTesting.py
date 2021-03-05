@@ -2,9 +2,23 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.collections import LineCollection
 from matplotlib.colors import ListedColormap, BoundaryNorm
+import pandas as pd
 
-x = np.linspace(0, 3 * np.pi, 500)
-y = np.sin(x)
+
+def get_sec(time_str):
+    h, m, s = time_str.split(':')
+    return int(h) * 3600 + int(m) * 60 + int(s)
+
+
+csvfile = 'CSVFiles/Tardigrade7hrTrack.csv'
+df = pd.read_csv(csvfile)
+data = np.genfromtxt(csvfile, delimiter=',', names=['x', 'y'])
+x = data['x']
+y = data['y']
+
+tv = []
+print(get_sec(df.max()[2]) - get_sec(df.min()[2]))
+
 dydx = np.cos(0.5 * (x[:-1] + x[1:]))  # first derivative
 
 # Create a set of line segments so that we can color them individually
@@ -15,6 +29,8 @@ points = np.array([x, y]).T.reshape(-1, 1, 2)
 segments = np.concatenate([points[:-1], points[1:]], axis=1)
 
 fig, axs = plt.subplots(2, 1, sharex=True, sharey=True)
+# fig = plt.figure(figsize=(8, 6))
+# ax = fig.add_subplot(111)
 
 # Create a continuous norm to map from data points to colors
 norm = plt.Normalize(dydx.min(), dydx.max())
@@ -34,6 +50,7 @@ lc.set_linewidth(2)
 line = axs[1].add_collection(lc)
 fig.colorbar(line, ax=axs[1])
 
-axs[0].set_xlim(x.min(), x.max())
-axs[0].set_ylim(-1.1, 1.1)
+axs[0].set_xlim(df.min()[0] - 500, df.max()[0] + 500)
+axs[0].set_ylim(df.min()[1] - 500, df.max()[1] + 500)
+
 plt.show()
