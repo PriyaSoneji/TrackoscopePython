@@ -7,6 +7,7 @@ import mplcursors
 
 
 # reference code: https://matplotlib.org/stable/gallery/lines_bars_and_markers/multicolored_line.html
+# color map reference: https://matplotlib.org/stable/tutorials/colors/colormaps.html
 
 def get_sec(time_str):
     h, m, s = time_str.split(':')
@@ -42,9 +43,9 @@ fig = plt.figure(figsize=(8, 6))
 ax = fig.add_subplot(111, xlabel="X-Pos", ylabel="Y-Pos", title="Trackoscope Data")
 
 # Create a continuous norm to map from data points to colors
+# decent cmap types - 'turbo', 'gist_rainbow', 'turbo', 'cool', 'hsv',
 norm = plt.Normalize(timev[0], timev[-1])
-lc = LineCollection(segments, cmap='plasma', norm=norm)
-# Set the values used for colormapping
+lc = LineCollection(segments, cmap='cool', norm=norm)
 lc.set_array(np.array(timev))
 lc.set_linewidth(2)
 line = ax.add_collection(lc)
