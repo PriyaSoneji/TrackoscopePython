@@ -1,73 +1,57 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.animation as animation
-from matplotlib import cm
-import matplotlib.collections as mcoll
-import matplotlib.path as mpath
+from matplotlib.collections import LineCollection
+from matplotlib.colors import ListedColormap, BoundaryNorm
 import pandas as pd
 import mplcursors
 
-csvfile = 'CSVFiles/Tardigrade7hrTrack.csv'
-df = pd.read_csv(csvfile)
 
+# reference code: https://matplotlib.org/stable/gallery/lines_bars_and_markers/multicolored_line.html
 
 def get_sec(time_str):
     h, m, s = time_str.split(':')
     return int(h) * 3600 + int(m) * 60 + int(s)
 
 
+csvfile = 'CSVFiles/Tardigrade7hrTrack.csv'
+df = pd.read_csv(csvfile)
+data = np.genfromtxt(csvfile, delimiter=',', names=['x', 'y'])
+x = data['x']
+y = data['y']
+
 timev = []
+timevadj = []
 mint = get_sec(df.min()[2])
 maxt = get_sec(df.max()[2])
 timediff = maxt - mint
 
 # converts the times to value between 0 and 255 so can do rgb
 for index, row in df.iterrows():
-    timev.append(round((255 / timediff) * ((get_sec(row['time'])) - mint), 2))
+    timev.append((get_sec(row['time'])) - mint)
 
+for index, row in df.iterrows():
+    timevadj.append(round((255 / timediff) * ((get_sec(row['time'])) - mint), 2))
 
-def colorline(
-        x, y, z=None, cmap=plt.get_cmap('copper'), norm=plt.Normalize(0.0, 1.0),
-        linewidth=3, alpha=1.0):
-    # Default colors equally spaced on [0,1]:
-    if z is None:
-        z = np.linspace(0.0, 1.0, len(x))
+dydx = np.cos(0.5 * (x[:-1] + x[1:]))  # first derivative
 
-    # Special case if a single number:
-    if not hasattr(z, "__iter__"):  # to check for numerical input -- this is a hack
-        z = np.array([z])
-
-    z = np.asarray(z)
-
-    segments = make_segments(x, y)
-    lc = mcoll.LineCollection(segments, array=z, cmap=cmap, norm=norm,
-                              linewidth=linewidth, alpha=alpha)
-
-    ax = plt.gca()
-    ax.set_xlim(df.min()[0] - 500, df.max()[0] + 500)
-    ax.set_ylim(df.min()[1] - 500, df.max()[1] + 500)
-    ax.add_collection(lc)
-
-    return lc
-
-
-def make_segments(x, y):
-    points = np.array([x, y]).T.reshape(-1, 1, 2)
-    segments = np.concatenate([points[:-1], points[1:]], axis=1)
-    return segments
-
-
-data = np.genfromtxt(csvfile, delimiter=',', names=['x', 'y'])
-x = data['x']
-y = data['y']
-# tv = np.cos(x)
+# Create a set of line segments so that we can color them individually
+points = np.array([x, y]).T.reshape(-1, 1, 2)
+segments = np.concatenate([points[:-1], points[1:]], axis=1)
 
 fig = plt.figure(figsize=(8, 6))
-ax = fig.add_subplot(111)
+ax = fig.add_subplot(111, xlabel="X-Pos", ylabel="Y-Pos", title="Trackoscope Data")
 
-for i in range(10):
-    colorline(x, y, cmap='cubehelix', linewidth=1)
+# Create a continuous norm to map from data points to colors
+norm = plt.Normalize(timev[0], timev[-1])
+lc = LineCollection(segments, cmap='plasma', norm=norm)
+# Set the values used for colormapping
+lc.set_array(np.array(timev))
+lc.set_linewidth(2)
+line = ax.add_collection(lc)
+fig.colorbar(line)
+
+ax.set_xlim(df.min()[0] - 200, df.max()[0] + 200)
+ax.set_ylim(df.min()[1] - 200, df.max()[1] + 200)
 
 mplcursors.cursor()
-
 plt.show()

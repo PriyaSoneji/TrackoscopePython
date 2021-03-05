@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from matplotlib.collections import LineCollection
 from matplotlib.colors import ListedColormap, BoundaryNorm
 import pandas as pd
+import mplcursors
 
 
 # reference code: https://matplotlib.org/stable/gallery/lines_bars_and_markers/multicolored_line.html
@@ -38,18 +39,19 @@ points = np.array([x, y]).T.reshape(-1, 1, 2)
 segments = np.concatenate([points[:-1], points[1:]], axis=1)
 
 fig = plt.figure(figsize=(8, 6))
-ax = fig.add_subplot(111)
+ax = fig.add_subplot(111, xlabel="X-Pos", ylabel="Y-Pos", title="Trackoscope Data")
 
 # Create a continuous norm to map from data points to colors
 norm = plt.Normalize(timev[0], timev[-1])
-lc = LineCollection(segments, cmap='copper', norm=norm)
+lc = LineCollection(segments, cmap='plasma', norm=norm)
 # Set the values used for colormapping
-lc.set_array(timevadj)
+lc.set_array(np.array(timev))
 lc.set_linewidth(2)
 line = ax.add_collection(lc)
-fig.colorbar(line, ax=ax)
+fig.colorbar(line)
 
-ax.set_xlim(df.min()[0] - 500, df.max()[0] + 500)
-ax.set_ylim(df.min()[1] - 500, df.max()[1] + 500)
+ax.set_xlim(df.min()[0] - 200, df.max()[0] + 200)
+ax.set_ylim(df.min()[1] - 200, df.max()[1] + 200)
 
+mplcursors.cursor()
 plt.show()
