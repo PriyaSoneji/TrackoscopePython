@@ -10,17 +10,18 @@ import mplcursors
 # color map reference: https://matplotlib.org/stable/tutorials/colors/colormaps.html
 # decent cmap types - 'turbo', 'gist_rainbow', 'cool', 'hsv'
 
-
+# function to change timestamp to seconds
 def get_sec(time_str):
     h, m, s = time_str.split(':')
     return int(h) * 3600 + int(m) * 60 + int(s)
 
 
+# read csv file and create pandas dataframe
 csvfile = 'CSVFiles/Tardigrade7hrTrack.csv'
 df = pd.read_csv(csvfile)
 
+# variables and lists needed
 timev = []
-timevadj = []
 mint = get_sec(df.min()[2])
 maxt = get_sec(df.max()[2])
 timediff = maxt - mint
@@ -33,12 +34,9 @@ for index, row in df.iterrows():
     x.append(row['xval'])
     y.append(row['yval'])
 
-# converts the times to value between 0 and 255 so can do rgb
+# converts the list of time stamp to list of seconds starting from zero
 for index, row in df.iterrows():
     timev.append((get_sec(row['time'])) - mint)
-
-for index, row in df.iterrows():
-    timevadj.append(round((255 / timediff) * ((get_sec(row['time'])) - mint), 2))
 
 # timeexp = list(range(0, timev[-1] + 1))
 timeexp = [0]
@@ -48,13 +46,16 @@ count = 0
 for t in timev:
     changet = timev[count + 1] - timev[count]
     if changet >= 30:
+        # if 30 second gap in time stamps then speed is assumed to be zero
         for j in range(int(timev[count + 1] - timev[count])):
             speed.append(0)
             timeexp.append(timeexp[-1] + 30)
     elif changet == 0:
+        # if entries with same timestamp just duplicate previous entry (avoids divide by zero error)
         speed.append(speed[-1])
         timeexp.append(timeexp[-1])
     else:
+        # calculate speed based on change in distance/change in time
         distance = np.sqrt(((x[count + 1] - x[count]) ** 2) + ((y[count + 1] - y[count]) ** 2))
         speed.append(round((distance / changet), 2))
         timeexp.append(timeexp[-1] + changet)
@@ -66,7 +67,7 @@ for t in timev:
 
 speed.append(speed[-1])
 
-# define plot
+# define plots
 fig = plt.figure(figsize=(8, 6), facecolor='lightgrey', constrained_layout=True)
 spec = fig.add_gridspec(2, 2)
 ax = fig.add_subplot(spec[0, 0], xlabel='X-Movement (μm)', ylabel='Y-Movement (μm)', title='Position vs Time',
@@ -106,7 +107,7 @@ ax1.set_ylim(speed[0] - 5, speed[-1] + 5)
 # Create a set of line segments so that we can color them individually
 points3 = np.array([x, y]).T.reshape(-1, 1, 2)
 segments3 = np.concatenate([points3[:-1], points3[1:]], axis=1)
-# Define gradient and plot pos vs time graph
+# Define gradient and plot pos vs speed graph
 norm3 = plt.Normalize(min(speed), max(speed))
 lc3 = LineCollection(segments3, cmap='turbo', norm=norm3)
 lc3.set_array(np.array(speed))
@@ -116,5 +117,6 @@ fig.colorbar(line3, ax=ax2)
 ax2.set_xlim(df.min()[0] - 200, df.max()[0] + 200)
 ax2.set_ylim(df.min()[1] - 200, df.max()[1] + 200)
 
+# show plots
 mplcursors.cursor()
 plt.show()
