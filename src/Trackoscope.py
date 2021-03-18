@@ -328,7 +328,7 @@ def onClose():
 
 # the micrometers per send
 basestepsize = 86.24
-incrementstepxy = basestepsize/16
+incrementstepxy = basestepsize/4
 
 
 # defines how to make a move depending on location of bounding box center
@@ -636,8 +636,9 @@ print("[INFO] starting video stream...")
 for x in range(3):
     if testDevice(x):
         availvid.append(x)
-vs = VideoStream(src=(availvid[len(availvid) - 1])).start()
-# vs = VideoStream(src=0).start()
+
+# vs = VideoStream(src=(availvid[-1])).start()
+vs = VideoStream(src=1).start()
 sleep(1.0)
 
 # place the buttons
