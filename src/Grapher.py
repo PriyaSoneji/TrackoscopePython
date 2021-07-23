@@ -17,7 +17,7 @@ def get_sec(time_str):
 
 
 # read csv file and create pandas dataframe
-csvfile = 'CSVFiles/Tardigrade7hrTrack.csv'
+csvfile = 'CSVFiles/Blepharisma1.csv'
 df = pd.read_csv(csvfile)
 
 # variables and lists needed

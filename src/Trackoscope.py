@@ -554,10 +554,10 @@ def changeSpeedMode():
 def dataSave():
     global z_values, y_values, x_values, trackinginZ, timestamps
     if trackinginZ:
-        df = pandas.DataFrame(data={"xval": x_values, "yval": y_values, "zval": z_values, "times": timestamps})
+        df = pandas.DataFrame(data={"xval": x_values, "yval": y_values, "zval": z_values, "time": timestamps})
         df.to_csv("./trackingvals.csv", sep=',', index=False)
     else:
-        df = pandas.DataFrame(data={"xval": x_values, "yval": y_values, "times": timestamps})
+        df = pandas.DataFrame(data={"xval": x_values, "yval": y_values, "time": timestamps})
         df.to_csv("./trackingvals.csv", sep=',', index=False)
 
 
@@ -587,7 +587,7 @@ def plotgraph():
 
 # Checks for a valid camera
 def testDevice(source):
-    cap = cv2.VideoCapture(source)
+    cap = cv2.VideoCapture(source, cv2.CAP_DSHOW)
     if cap is None or not cap.isOpened():
         return False
     else:
@@ -630,12 +630,11 @@ zposButton = Button(root, text="Z+", command=zPos, activebackground='yellow')
 znegButton = Button(root, text="Z-", command=zNeg, activebackground='yellow')
 stopmovButton = Button(root, text="S", command=stopMov, activebackground='yellow')
 
-# if a video path was not supplied, grab the reference to the web cam
 
 print("[INFO] starting video stream...")
-for x in range(3):
-    if testDevice(x):
-        availvid.append(x)
+# for x in range(3):
+#     if testDevice(x):
+#         availvid.append(x)
 
 # vs = VideoStream(src=(availvid[-1])).start()
 vs = VideoStream(src=1).start()
