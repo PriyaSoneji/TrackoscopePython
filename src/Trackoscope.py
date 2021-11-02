@@ -233,7 +233,7 @@ def videoLoop():
             # grab the frame from the video stream and resize it to
             # have a maximum width of 300 pixels
             frame = vs.read()
-            frame = imutils.resize(frame, width=600)
+            frame = imutils.resize(frame, width=700)
             (H, W) = frame.shape[:2]
 
             # check to see if we are currently tracking an object
@@ -323,12 +323,12 @@ def onClose():
     initBB = None
     stopEvent.set()
     root.quit()
-    sys.exit()
+    sys.exit() 
 
 
 # the micrometers per send
 basestepsize = 86.24
-incrementstepxy = basestepsize/4
+incrementstepxy = basestepsize/8
 
 
 # defines how to make a move depending on location of bounding box center
