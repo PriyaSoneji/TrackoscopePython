@@ -328,7 +328,7 @@ def onClose():
 
 # the micrometers per send
 basestepsize = 86.24
-incrementstepxy = basestepsize/8
+incrementstepxy = basestepsize/2
 
 
 # defines how to make a move depending on location of bounding box center

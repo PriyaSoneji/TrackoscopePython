@@ -17,7 +17,7 @@ def get_sec(time_str):
 
 
 # read csv file and create pandas dataframe
-csvfile = 'CSVFiles/Stentor2.csv'
+csvfile = 'CSVFiles/BrineShrimp1.csv'
 df = pd.read_csv(csvfile)
 
 # variables and lists needed
@@ -88,8 +88,8 @@ lc1.set_array(np.array(timev))
 lc1.set_linewidth(1)
 line1 = ax.add_collection(lc1)
 fig.colorbar(line1, ax=ax)
-ax.set_xlim(df.min()[0] - 200, df.max()[0] + 200)
-ax.set_ylim(df.min()[1] - 200, df.max()[1] + 200)
+ax.set_xlim(df.min()[0] - 20, df.max()[0] + 20)
+ax.set_ylim(df.min()[1] - 20, df.max()[1] + 20)
 
 # Create a set of line segments so that we can color them individually
 points2 = np.array([timeexp, speed]).T.reshape(-1, 1, 2)
@@ -101,8 +101,8 @@ lc2.set_array(np.array(speed))
 lc2.set_linewidth(1)
 line2 = ax1.add_collection(lc2)
 fig.colorbar(line2, ax=ax1)
-ax1.set_xlim(timeexp[0] - 200, timeexp[-1] + 200)
-ax1.set_ylim(speed[0] - 5, speed[-1] + 5)
+ax1.set_xlim(timeexp[0] - 20, timeexp[-1] + 20)
+ax1.set_ylim(0, speed[-1] + 100)
 
 # Create a set of line segments so that we can color them individually
 points3 = np.array([x, y]).T.reshape(-1, 1, 2)
