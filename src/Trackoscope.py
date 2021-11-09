@@ -280,6 +280,9 @@ def videoLoop():
             timestamp = str(now.strftime("%H:%M:%S"))
 
             # initialize info on screen
+
+
+        
             info = [
                 ("Time", timestamp)
                 # ("FPS", "{:.2f}".format(fps.fps())),
