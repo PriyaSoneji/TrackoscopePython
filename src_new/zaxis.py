@@ -20,11 +20,11 @@ import datetime
 from src_new.arduino_communication import *
 from src_new.basic_tracking import *
 from src_new.trajectory_mapping import *
-from src_new.initialization import *
 from src_new.gui import *
 
 trackinginZ = bool(False)
 z_values = []
+z_values.append(0)
 
 
 # checks for bluriness
@@ -145,3 +145,15 @@ def fixBlurMotor():
     zval = updowncount
     addpoint()
     print("ended")
+
+
+def get_z_vals():
+    return z_values
+
+
+def add_z_val(val):
+    z_values.append(val)
+
+
+def get_trackinginZ():
+    return trackinginZ

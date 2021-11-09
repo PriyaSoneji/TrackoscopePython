@@ -17,10 +17,7 @@ from imutils.video import FPS
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import datetime
-from src_new.arduino_communication import *
 from src_new.basic_tracking import *
-from src_new.initialization import *
-from src_new.gui import *
 from src_new.zaxis import *
 
 count = 0
@@ -30,14 +27,19 @@ countgraphmax = 30
 
 bar1 = None
 
+timestamps = []
+now = datetime.datetime.now()
+timestamp = str(now.strftime("%H:%M:%S"))
+timestamps.append(timestamp)
+
 
 # add points to the graph and updates plot
 def addpoint():
     global count, countmax, figure1, zval, countgraph, countgraphmax, timestamps
     if count == countmax:
-        x_values.append(round(currx, 2))
-        y_values.append(round(curry, 2))
-        z_values.append(round(zval, 2))
+        add_x_val(round(currx, 2))
+        add_y_val(round(curry, 2))
+        add_z_val(round(zval, 2))
         now = datetime.datetime.now()
         timestamp = str(now.strftime("%H:%M:%S"))
         timestamps.append(timestamp)
@@ -52,7 +54,7 @@ def addpoint():
 def def_fig1():
     # figure one data
     figure1 = plt.Figure(figsize=(6, 5), dpi=100)
-    if trackinginZ:
+    if get_trackinginZ():
         ax = figure1.add_subplot(111, projection='3d')
     else:
         ax = figure1.add_subplot(111)
@@ -61,31 +63,32 @@ def def_fig1():
 
 
 def dataSave():
-    global z_values, y_values, x_values, trackinginZ, timestamps
-    if trackinginZ:
-        df = pandas.DataFrame(data={"xval": x_values, "yval": y_values, "zval": z_values, "time": timestamps})
+    global timestamps
+    if get_trackinginZ():
+        df = pandas.DataFrame(
+            data={"xval": get_x_vals(), "yval": get_y_vals(), "zval": get_z_vals(), "time": timestamps})
         df.to_csv("./trackingvals.csv", sep=',', index=False)
     else:
-        df = pandas.DataFrame(data={"xval": x_values, "yval": y_values, "time": timestamps})
+        df = pandas.DataFrame(data={"xval": get_x_vals(), "yval": get_y_vals(), "time": timestamps})
         df.to_csv("./trackingvals.csv", sep=',', index=False)
 
 
 # plots the graph using matplotlib
 def plotgraph():
     # grab a reference to the image panels
-    global panelA, figure1, ax, root, x_values, y_values, z_values, trackinginZ
+    global panelA, figure1, ax, root
 
     ax.cla()
 
     # plot
-    if trackinginZ:
-        ax.plot(x_values, y_values, z_values, color='black', linestyle='solid', marker='+',
+    if get_trackinginZ():
+        ax.plot(get_x_vals(), get_y_vals(), get_z_vals(), color='black', linestyle='solid', marker='+',
                 markerfacecolor='blue', markevery=[-1])
         ax.set_xlabel('X-Movement (μm)')
         ax.set_ylabel('Y-Movement (μm)')
         ax.set_zlabel('Z-Movement (μm)')
     else:
-        ax.plot(x_values, y_values, color='green', linestyle='solid', marker='H',
+        ax.plot(get_x_vals(), get_y_vals(), color='green', linestyle='solid', marker='H',
                 markerfacecolor='blue', markersize=8, markevery=[-1])
         ax.set_xlabel('X-Movement (μm)')
         ax.set_ylabel('Y-Movement (μm)')

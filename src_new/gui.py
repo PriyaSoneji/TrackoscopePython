@@ -17,10 +17,8 @@ from imutils.video import FPS
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import datetime
-from src_new.arduino_communication import *
 from src_new.basic_tracking import *
 from src_new.trajectory_mapping import *
-from src_new.initialization import *
 from src_new.zaxis import *
 
 rotate = bool(False)
@@ -38,6 +36,7 @@ frame = None
 thread = None
 thread2 = None
 stopEvent = threading.Event()
+infovar = StringVar()
 
 
 def button_init():
@@ -74,6 +73,20 @@ def button_init():
     znegButton.grid(row=4, column=2, sticky='WENS')
     stopmovButton.grid(row=2, column=3, sticky='WENS')
     infoLabel.grid(row=4, column=0, sticky='WENS')
+
+
+def onClose():
+    global root, stopEvent, vs, initBB
+    # set the stop event, cleanup the camera, and allow the rest of
+    # the quit process to continue
+    print("[INFO] closing...")
+    cv2.destroyAllWindows()
+    sendCommand('E'.encode())
+    vs.stop()
+    initBB = None
+    stopEvent.set()
+    root.quit()
+    sys.exit()
 
 
 def setFocusLabel():

@@ -19,7 +19,6 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import datetime
 from src_new.arduino_communication import *
 from src_new.trajectory_mapping import *
-from src_new.initialization import *
 from src_new.gui import *
 from src_new.zaxis import *
 
@@ -61,15 +60,9 @@ curry = 0
 
 x_values = []
 y_values = []
-timestamps = []
 
 x_values.append(0)
 y_values.append(0)
-z_values.append(0)
-
-now = datetime.datetime.now()
-timestamp = str(now.strftime("%H:%M:%S"))
-timestamps.append(timestamp)
 
 # the micrometers per send
 basestepsize = 86.24
@@ -84,11 +77,9 @@ initBB = None
 fps = FPS().start()
 infovar = StringVar()
 
-vs = None
 
-
-def videoLoop():
-    global vs, panelB, frame, initBB, x, y, w, h, H, W, centered, fps, trackingsuccess, centerx, centery, showOverlay, oldxdirection, oldydirection
+def videoLoop(vs):
+    global panelB, frame, initBB, x, y, w, h, H, W, centered, fps, trackingsuccess, centerx, centery, showOverlay, oldxdirection, oldydirection
     try:
         # keep looping over frames until we are instructed to stop
         while not stopEvent.is_set():
@@ -249,3 +240,19 @@ def startTracking():
     infovar.set("Tracking Started")
 
     tracking = True
+
+
+def get_x_vals():
+    return x_values
+
+
+def get_y_vals():
+    return y_values
+
+
+def add_x_val(val):
+    x_values.append(val)
+
+
+def add_y_val(val):
+    y_values.append(val)
