@@ -67,6 +67,10 @@ yrangell = 40
 # graphing stuff
 currx = 0
 curry = 0
+fovx = 0
+fovy = 0
+
+start_sec = 0
 
 # Z-Axis
 zdirection = 'N'
@@ -76,22 +80,33 @@ focus = 0
 originalFocus = 0
 compareFocus = 0
 
-x_values = []
-y_values = []
-z_values = []
+fov_x = [0]
+fov_y = [0]
+screen_x = [0]
+screen_y = [0]
+x_values = [0]
+y_values = [0]
+z_values = [0]
 timestamps = []
-
-x_values.append(0)
-y_values.append(0)
-z_values.append(0)
-
-now = datetime.datetime.now()
-timestamp = str(now.strftime("%H:%M:%S"))
-timestamps.append(timestamp)
 
 availvid = []
 
 trackinginZ = bool(False)
+
+
+# get current time
+def getTime():
+    now = datetime.datetime.now()
+    timestamp = str(now.strftime("%H:%M:%S.%f")[:-4])
+    return timestamp
+
+
+def getSeconds():
+    now = datetime.datetime.now()
+    return now.timestamp() * 1000
+
+
+timestamps.append(getTime())
 
 
 # checks for bluriness
@@ -136,27 +151,20 @@ thread = None
 thread2 = None
 stopEvent = threading.Event()
 
-count = 0
-countmax = 10
 countgraph = 0
-countgraphmax = 30
+countgraphmax = 10
 
 
 # add points to the graph and updates plot
 def addpoint():
-    global count, countmax, figure1, zval, countgraph, countgraphmax, timestamps
-    if count == countmax:
-        x_values.append(round(currx, 2))
-        y_values.append(round(curry, 2))
-        z_values.append(round(zval, 2))
-        now = datetime.datetime.now()
-        timestamp = str(now.strftime("%H:%M:%S"))
-        timestamps.append(timestamp)
-        count = 0
+    global zval, countgraph, countgraphmax, x_values, y_values, fov_x, fov_y, screen_x, screen_y
+    x_values = np.add(fov_x, screen_x)
+    y_values = np.add(fov_y, screen_y)
+    z_values.append(round(zval, 2))
+    timestamps.append(getTime())
     if countgraph == countgraphmax:
         plotgraph()
         countgraph = 0
-    count = count + 1
     countgraph = countgraph + 1
 
 
@@ -228,9 +236,25 @@ def sendCommandThread(cmd, serport):
 fps = FPS().start()
 infovar = StringVar()
 
+# FOV Data (um)
+# If 5x Objective - w=7330, h=4000
+# If 10x Objective - w=1740, h=975
+fov_width = 7330
+fov_height = 4000
+pixel_distance = 0
+
+
+def find_org_move():
+    global pixel_distance, currx, curry, screen_x, screen_y, fov_x, fov_y, fovx, fovy
+    screen_x.append(currx)
+    screen_y.append(curry)
+    fov_x.append(fovx)
+    fov_y.append(fovy)
+    addpoint()
+
 
 def videoLoop():
-    global vs, panelB, frame, initBB, x, y, w, h, H, W, centered, fps, trackingsuccess, centerx, centery, showOverlay, oldxdirection, oldydirection
+    global vs, fov_height, fov_width, panelB, frame, initBB, x, y, w, h, H, W, centered, fps, currx, curry, trackingsuccess, centerx, centery, showOverlay, oldxdirection, oldydirection, pixel_distance, start_sec
     try:
         # keep looping over frames until we are instructed to stop
         while not stopEvent.is_set():
@@ -239,6 +263,10 @@ def videoLoop():
             frame = vs.read()
             frame = imutils.resize(frame, width=700)
             (H, W) = frame.shape[:2]
+
+            # find how much pixel is in distance
+            pixel_distance = ((fov_width / W) + (fov_height / H)) / 2
+            pixel_distance = round(pixel_distance, 2)
 
             # check to see if we are currently tracking an object
             if initBB is not None:
@@ -249,6 +277,14 @@ def videoLoop():
                 trackingsuccess = success
                 centerx = x + int(w / 2)
                 centery = y + int(h / 2)
+
+                # set starting position
+                if len(timestamps) == 1:
+                    start_sec = getSeconds()
+                    currx = (centerx - (W / 2)) * pixel_distance
+                    curry = ((H - centery) - (H / 2)) * pixel_distance
+                    find_org_move()
+                    print(start_sec)
 
                 if centerx > 585 or centerx < 15:
                     trackingsuccess = bool(False)
@@ -267,9 +303,13 @@ def videoLoop():
 
                 if success:
                     centered = makemove()
+                    if getSeconds() % 100 < 5:
+                        currx = (centerx - (W / 2)) * pixel_distance
+                        curry = ((H - centery) - (H / 2)) * pixel_distance
+                        find_org_move()
 
-                    # cv2.rectangle(frame, (x, y), (x + w, y + h),
-                    #               (0, 255, 0), 2)
+                    cv2.rectangle(frame, (x, y), (x + w, y + h),
+                                  (0, 255, 0), 2)
 
                     if showOverlay:
                         if centered:
@@ -280,15 +320,10 @@ def videoLoop():
             fps.update()
             fps.stop()
 
-            now = datetime.datetime.now()
-            timestamp = str(now.strftime("%H:%M:%S"))
-
             # initialize info on screen
 
-
-        
             info = [
-                ("Time", timestamp)
+                ("Time", getTime())
                 # ("FPS", "{:.2f}".format(fps.fps())),
                 # ("X-Move", oldxdirection),
                 # ("Y-Move", oldydirection),
@@ -333,15 +368,15 @@ def onClose():
     sys.exit()
 
 
-# the micrometers per send
-basestepsize = 86.24
-incrementstepxy = basestepsize / 2
+# the micrometers per second at no micostepping
+baseSpeed = 3940
+microstepping = baseSpeed / 2
 
 
 # defines how to make a move depending on location of bounding box center
 def makemove():
     global centerx, centery, newxdirection, oldxdirection, newydirection, oldydirection, ydirection, \
-        xdirection, x, y, w, h, W, H, currx, curry, centered, incrementstepxy, trackingsuccess, speedMode
+        xdirection, x, y, w, h, W, H, fovx, fovy, centered, microstepping, trackingsuccess, speedMode
 
     centerx = x + int(w / 2)
     centery = y + int(h / 2)
@@ -349,12 +384,10 @@ def makemove():
     # Send X direction
     if ((centerx / W) * 100) > xrangehl:
         newxdirection = 'R'
-        currx = currx + incrementstepxy
-        addpoint()
+        fovx = fovx + microstepping
     elif ((centerx / W) * 100) < xrangell:
         newxdirection = 'L'
-        currx = currx - incrementstepxy
-        addpoint()
+        fovx = fovx - microstepping
     else:
         newxdirection = 'X'
 
@@ -365,12 +398,10 @@ def makemove():
     # Send Y direction
     if ((centery / H) * 100) > yrangehl:
         newydirection = 'U'
-        curry = curry - incrementstepxy
-        addpoint()
+        fovy = fovy - microstepping
     elif ((centery / H) * 100) < yrangell:
         newydirection = 'D'
-        curry = curry + incrementstepxy
-        addpoint()
+        fovy = fovy + microstepping
     else:
         newydirection = 'Y'
 
@@ -457,7 +488,7 @@ zval = 0
 
 # uses a motor to fix the blur
 def fixBlurMotor():
-    global originalFocus, compareFocus, rightDirection, focus, zdirection, blurcap, ogfocus, updowncount, zval, incrementstepxy
+    global originalFocus, compareFocus, rightDirection, focus, zdirection, blurcap, ogfocus, updowncount, zval
     rightDirection = bool(True)
     zdirection = 'b'
     ogfocus = focus
@@ -491,9 +522,9 @@ def fixBlurMotor():
                 zdirection = 't'
 
         if zdirection == 't':
-            updowncount = updowncount + incrementstepxy
+            updowncount = updowncount + 12
         else:
-            updowncount = updowncount - incrementstepxy
+            updowncount = updowncount - 12
 
         sendCommand(zdirection.encode())
 

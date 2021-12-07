@@ -17,7 +17,7 @@ def get_sec(time_str):
 
 
 # read csv file and create pandas dataframe
-csvfile = 'CSVFiles/BrineShrimp1.csv'
+csvfile = 'CSVFiles/Stentor1.csv'
 df = pd.read_csv(csvfile)
 
 # variables and lists needed
@@ -102,7 +102,19 @@ lc2.set_linewidth(1)
 line2 = ax1.add_collection(lc2)
 fig.colorbar(line2, ax=ax1)
 ax1.set_xlim(timeexp[0] - 20, timeexp[-1] + 20)
-ax1.set_ylim(0, speed[-1] + 100)
+ax1.set_ylim(0, speed[-1] + 30)
+
+
+def resize_proportional(arr, n):
+    a = np.asarray(arr)
+    return a[np.round(np.linspace(0, len(a) - 1, n)).astype(int)]
+
+
+print(len(speed))
+speed_resize = resize_proportional(speed, 1055)
+speed_resize = [round(num) for num in speed_resize]
+print(len(speed_resize))
+print(speed_resize)
 
 # Create a set of line segments so that we can color them individually
 points3 = np.array([x, y]).T.reshape(-1, 1, 2)
