@@ -111,9 +111,6 @@ def getMicroSeconds():
     return now.timestamp() * 1000
 
 
-timestamps.append(getTime())
-
-
 # checks for bluriness
 def variance_of_laplacian(image):
     # compute the Laplacian of the image and then return the focus
@@ -162,11 +159,11 @@ countgraphmax = 10
 
 # add points to the graph and updates plot
 def addpoint():
-    global zval, countgraph, countgraphmax, x_values, y_values, fov_x, fov_y, screen_x, screen_y
+    global zval, countgraph, countgraphmax, x_values, y_values, fov_x, fov_y, screen_x, screen_y, start_sec
     x_values = np.add(fov_x, screen_x)
     y_values = np.add(fov_y, screen_y)
     z_values.append(round(zval, 2))
-    timestamps.append(getTime())
+    timestamps.append(round((float(getSeconds()) - float(start_sec)), 3))
     if countgraph == countgraphmax:
         plotgraph()
         countgraph = 0
@@ -285,10 +282,10 @@ def videoLoop():
                 # set starting position
                 if len(timestamps) == 1:
                     start_sec = getSeconds()
-                    currx = (centerx - (W / 2)) * pixel_distance
-                    curry = ((H - centery) - (H / 2)) * pixel_distance
+                    timestamps.append(0)
+                    # currx = (centerx - (W / 2)) * pixel_distance
+                    # curry = ((H - centery) - (H / 2)) * pixel_distance
                     find_org_move()
-                    print(start_sec)
 
                 if centerx > 585 or centerx < 15:
                     trackingsuccess = bool(False)
@@ -312,8 +309,8 @@ def videoLoop():
                         curry = ((H - centery) - (H / 2)) * pixel_distance
                         find_org_move()
 
-                    cv2.rectangle(frame, (x, y), (x + w, y + h),
-                                  (0, 255, 0), 2)
+                    # cv2.rectangle(frame, (x, y), (x + w, y + h),
+                    #               (0, 255, 0), 2)
 
                     if showOverlay:
                         if centered:
@@ -327,7 +324,7 @@ def videoLoop():
             # initialize info on screen
 
             info = [
-                ("Time", getTime())
+                ("Time", round((float(getSeconds()) - float(start_sec)), 3))
                 # ("FPS", "{:.2f}".format(fps.fps())),
                 # ("X-Move", oldxdirection),
                 # ("Y-Move", oldydirection),
@@ -422,9 +419,9 @@ def makemove():
         end_movey_sec = getSeconds() - start_sec
         deltay_sec = end_movey_sec - start_movey_sec
         if oldydirection == 'U':
-            fovy = fovy + (microstepping * deltay_sec)
-        if oldydirection == 'D':
             fovy = fovy - (microstepping * deltay_sec)
+        if oldydirection == 'D':
+            fovy = fovy + (microstepping * deltay_sec)
 
     if oldydirection != newydirection:
         sendCommand(newydirection.encode())
@@ -717,10 +714,10 @@ print("[INFO] starting video stream...")
 # for x in range(3):
 #     if testDevice(x):
 #         availvid.append(x)
-
+#
 # vs = VideoStream(src=(availvid[-1])).start()
-vs = VideoStream(src=1)
-sleep(1.0)
+vs = VideoStream(src=0)
+sleep(1.5)
 vs.start()
 
 init_buttons()
