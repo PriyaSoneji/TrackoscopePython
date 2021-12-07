@@ -103,6 +103,11 @@ def getTime():
 
 def getSeconds():
     now = datetime.datetime.now()
+    return now.timestamp()
+
+
+def getMicroSeconds():
+    now = datetime.datetime.now()
     return now.timestamp() * 1000
 
 
@@ -192,19 +197,18 @@ def serial_ports():
     return result
 
 
-def open_comm():
-    # open Arduino Serial
-    availableport = serial_ports()
-    if len(availableport) > 0:
-        # ser1 = serial.Serial(availableport[0], 2000000)
-        ser1 = serial.Serial("COM3", 2000000)
-        sleep(1)
-        ser1.flush()
-        sleep(2)
-        portopen = True
+# open Arduino Serial
+availableport = serial_ports()
+if len(availableport) > 0:
+    # ser1 = serial.Serial(availableport[0], 2000000)
+    ser1 = serial.Serial("COM3", 2000000)
+    sleep(1)
+    ser1.flush()
+    sleep(2)
+    portopen = True
 
 
-open_comm()
+# open_comm()
 
 # function to create our object tracker
 
@@ -303,7 +307,7 @@ def videoLoop():
 
                 if success:
                     centered = makemove()
-                    if getSeconds() % 100 < 5:
+                    if getMicroSeconds() % 100 < 5:
                         currx = (centerx - (W / 2)) * pixel_distance
                         curry = ((H - centery) - (H / 2)) * pixel_distance
                         find_org_move()
@@ -372,11 +376,19 @@ def onClose():
 baseSpeed = 3940
 microstepping = baseSpeed / 2
 
+# keep track of second change
+start_movex_sec = 0
+end_movex_sec = 0
+deltax_sec = start_movex_sec - end_movex_sec
+start_movey_sec = 0
+end_movey_sec = 0
+deltay_sec = start_movey_sec - end_movey_sec
+
 
 # defines how to make a move depending on location of bounding box center
 def makemove():
     global centerx, centery, newxdirection, oldxdirection, newydirection, oldydirection, ydirection, \
-        xdirection, x, y, w, h, W, H, fovx, fovy, centered, microstepping, trackingsuccess, speedMode
+        xdirection, x, y, w, h, W, H, fovx, fovy, centered, microstepping, trackingsuccess, speedMode, start_movex_sec, start_sec, deltay_sec, end_movex_sec, deltax_sec, deltay_sec, start_movey_sec, end_movey_sec
 
     centerx = x + int(w / 2)
     centery = y + int(h / 2)
@@ -384,31 +396,42 @@ def makemove():
     # Send X direction
     if ((centerx / W) * 100) > xrangehl:
         newxdirection = 'R'
-        fovx = fovx + microstepping
     elif ((centerx / W) * 100) < xrangell:
         newxdirection = 'L'
-        fovx = fovx - microstepping
     else:
         newxdirection = 'X'
+        end_movex_sec = getSeconds() - start_sec
+        deltax_sec = end_movex_sec - start_movex_sec
+        if oldxdirection == 'R':
+            fovx = fovx + (microstepping * deltax_sec)
+        if oldxdirection == 'L':
+            fovx = fovx - (microstepping * deltax_sec)
 
     if oldxdirection != newxdirection:
         sendCommand(newxdirection.encode())
         oldxdirection = newxdirection
+        start_movex_sec = getSeconds() - start_sec
 
     # Send Y direction
     if ((centery / H) * 100) > yrangehl:
         newydirection = 'U'
-        fovy = fovy - microstepping
     elif ((centery / H) * 100) < yrangell:
         newydirection = 'D'
-        fovy = fovy + microstepping
     else:
         newydirection = 'Y'
+        end_movey_sec = getSeconds() - start_sec
+        deltay_sec = end_movey_sec - start_movey_sec
+        if oldydirection == 'U':
+            fovy = fovy + (microstepping * deltay_sec)
+        if oldydirection == 'D':
+            fovy = fovy - (microstepping * deltay_sec)
 
     if oldydirection != newydirection:
         sendCommand(newydirection.encode())
         oldydirection = newydirection
+        start_movey_sec = getSeconds() - start_sec
 
+    # if not tracking stop motors
     if not trackingsuccess:
         oldydirection = 'Y'
         oldxdirection = 'X'
@@ -417,9 +440,12 @@ def makemove():
         if not speedMode:
             sendCommand('E'.encode())
         centered = True
+        start_move_sec = 0
+        end_move_sec = 0
     else:
         centered = False
 
+    # stop if run off too far
     if abs(currx) > 100000 or abs(curry) > 100000:
         hardStop()
         dataSave()
@@ -688,13 +714,14 @@ def init_buttons():
 
 
 print("[INFO] starting video stream...")
-for x in range(3):
-    if testDevice(x):
-        availvid.append(x)
+# for x in range(3):
+#     if testDevice(x):
+#         availvid.append(x)
 
-vs = VideoStream(src=(availvid[-1])).start()
-# vs = VideoStream(src=1).start()
+# vs = VideoStream(src=(availvid[-1])).start()
+vs = VideoStream(src=1)
 sleep(1.0)
+vs.start()
 
 init_buttons()
 
