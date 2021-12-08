@@ -240,8 +240,8 @@ infovar = StringVar()
 # FOV Data (um)
 # If 5x Objective - w=7330, h=4000
 # If 10x Objective - w=1740, h=975
-fov_width = 7330
-fov_height = 4000
+fov_width = 1740
+fov_height = 975
 pixel_distance = 0
 
 
@@ -371,7 +371,7 @@ def onClose():
 
 # the micrometers per second at no micostepping
 baseSpeed = 3940
-microstepping = baseSpeed / 2
+microstepping = baseSpeed / 4
 
 # keep track of second change
 start_movex_sec = 0
