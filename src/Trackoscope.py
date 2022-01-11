@@ -371,7 +371,7 @@ def onClose():
 
 # the micrometers per second at no micostepping
 baseSpeed = 3940
-microstepping = baseSpeed / 4
+microstepping = baseSpeed / 16
 
 # keep track of second change
 start_movex_sec = 0
@@ -659,6 +659,7 @@ def testDevice(source):
 def startTracking():
     global frame, initBB, tracker, tracking, thread2, ser1, infovar
     # if the 's' key is selected start tracking
+    frame = imutils.resize(frame, width=700)
     initBB = cv2.selectROI('Selection', frame, showCrosshair=True)
     cv2.destroyWindow('Selection')
     # start OpenCV object tracker using the supplied bounding box
