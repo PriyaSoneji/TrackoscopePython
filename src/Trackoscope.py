@@ -240,8 +240,8 @@ infovar = StringVar()
 # FOV Data (um)
 # If 5x Objective - w=7330, h=4000
 # If 10x Objective - w=1740, h=975
-fov_width = 1740
-fov_height = 975
+fov_width = 7330
+fov_height = 4000
 pixel_distance = 0
 
 
@@ -305,8 +305,8 @@ def videoLoop():
                 if success:
                     centered = makemove()
                     if getMicroSeconds() % 100 < 5:
-                        currx = (centerx - (W / 2)) * pixel_distance
-                        curry = ((H - centery) - (H / 2)) * pixel_distance
+                        currx = round(((centerx - (W / 2)) * pixel_distance), -2)
+                        curry = round((((H - centery) - (H / 2)) * pixel_distance), -2)
                         find_org_move()
 
                     # cv2.rectangle(frame, (x, y), (x + w, y + h),
@@ -371,7 +371,7 @@ def onClose():
 
 # the micrometers per second at no micostepping
 baseSpeed = 3940
-microstepping = baseSpeed / 16
+microstepping = baseSpeed / 4
 
 # keep track of second change
 start_movex_sec = 0
@@ -613,12 +613,12 @@ def changeSpeedMode():
 
 
 def dataSave():
-    global z_values, y_values, x_values, trackinginZ, timestamps
+    global z_values, y_values, x_values, trackinginZ, timestamps, fov_y, fov_x
     if trackinginZ:
         df = pandas.DataFrame(data={"xval": x_values, "yval": y_values, "zval": z_values, "time": timestamps})
         df.to_csv("./trackingvals.csv", sep=',', index=False)
     else:
-        df = pandas.DataFrame(data={"xval": x_values, "yval": y_values, "time": timestamps})
+        df = pandas.DataFrame(data={"xval": x_values, "yval": y_values, "time": timestamps, "platxval": fov_x, "platyval": fov_y, "orgxval": screen_x, "orgyval": screen_y})
         df.to_csv("./trackingvals.csv", sep=',', index=False)
 
 
@@ -659,6 +659,7 @@ def testDevice(source):
 def startTracking():
     global frame, initBB, tracker, tracking, thread2, ser1, infovar
     # if the 's' key is selected start tracking
+    frame = vs.read()
     frame = imutils.resize(frame, width=700)
     initBB = cv2.selectROI('Selection', frame, showCrosshair=True)
     cv2.destroyWindow('Selection')
