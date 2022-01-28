@@ -204,7 +204,6 @@ if len(availableport) > 0:
     sleep(2)
     portopen = True
 
-
 # open_comm()
 
 # function to create our object tracker
@@ -280,11 +279,11 @@ def videoLoop():
                 centery = y + int(h / 2)
 
                 # set starting position
-                if len(timestamps) == 1:
+                if len(timestamps) == 0:
                     start_sec = getSeconds()
                     timestamps.append(0)
-                    # currx = (centerx - (W / 2)) * pixel_distance
-                    # curry = ((H - centery) - (H / 2)) * pixel_distance
+                    currx = (centerx - (W / 2)) * pixel_distance
+                    curry = ((H - centery) - (H / 2)) * pixel_distance
                     find_org_move()
 
                 if centerx > 585 or centerx < 15:
@@ -369,9 +368,16 @@ def onClose():
     sys.exit()
 
 
+# full = 0 0 0
+# half = 1 0 0
+# quarter = 0 1 0
+# eigth = 1 1 0
+# sixteenth = 0 0 1
+# thirtysecond = 1 0 1
+
 # the micrometers per second at no micostepping
 baseSpeed = 3940
-microstepping = baseSpeed / 4
+microstepping = baseSpeed / 1
 
 # keep track of second change
 start_movex_sec = 0
@@ -618,7 +624,9 @@ def dataSave():
         df = pandas.DataFrame(data={"xval": x_values, "yval": y_values, "zval": z_values, "time": timestamps})
         df.to_csv("./trackingvals.csv", sep=',', index=False)
     else:
-        df = pandas.DataFrame(data={"xval": x_values, "yval": y_values, "time": timestamps, "platxval": fov_x, "platyval": fov_y, "orgxval": screen_x, "orgyval": screen_y})
+        df = pandas.DataFrame(
+            data={"xval": x_values, "yval": y_values, "time": timestamps, "platxval": fov_x, "platyval": fov_y,
+                  "orgxval": screen_x, "orgyval": screen_y})
         df.to_csv("./trackingvals.csv", sep=',', index=False)
 
 
