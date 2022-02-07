@@ -377,7 +377,7 @@ def onClose():
 
 # the micrometers per second at no micostepping
 baseSpeed = 3940
-microstepping = baseSpeed / 1
+microstepping = baseSpeed / 16
 
 # keep track of second change
 start_movex_sec = 0
