@@ -239,8 +239,8 @@ infovar = StringVar()
 # FOV Data (um)
 # If 5x Objective - w=7330, h=4000
 # If 10x Objective - w=1740, h=975
-fov_width = 1740
-fov_height = 975
+fov_width = 7330
+fov_height = 4000
 pixel_distance = 0
 
 
