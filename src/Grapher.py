@@ -10,7 +10,7 @@ import mplcursors
 # decent cmap types - 'turbo', 'gist_rainbow', 'cool', 'hsv'
 
 # read csv file and create pandas dataframe
-csvfile = 'CSVFiles/Spirostomum4.csv'
+csvfile = 'CSVFiles/Amoeba23.csv'
 df = pd.read_csv(csvfile)
 
 # variables and lists needed
@@ -35,7 +35,7 @@ for t in time:
     if changet != 0:
         distance = np.sqrt(((x[count + 1] - x[count]) ** 2) + ((y[count + 1] - y[count]) ** 2))
         v = round((distance / changet), 2)
-        if v < 2000:
+        if v < 1000:
             speed.append(v)
         else:
             speed.append(speed[-1])
