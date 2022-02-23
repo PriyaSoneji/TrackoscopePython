@@ -5,7 +5,7 @@ import imutils
 import pandas
 
 # define source of video and blank arrays
-vs = cv2.VideoCapture("./Video/Stentor_Stop_Go_Raw_Cropped.mp4")
+vs = cv2.VideoCapture("./Video/Stentor_Trim.mp4")
 count = 0
 video = cv2.VideoWriter('mygeneratedvideo.avi', 0, 1, (700, 385))
 frame_array = []

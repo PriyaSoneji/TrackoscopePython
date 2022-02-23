@@ -10,7 +10,7 @@ import mplcursors
 # decent cmap types - 'turbo', 'gist_rainbow', 'cool', 'hsv'
 
 # read csv file and create pandas dataframe
-csvfile = 'CSVFiles/Amoeba23.csv'
+csvfile = 'CSVFiles/AmoebaSlide.csv'
 df = pd.read_csv(csvfile)
 
 # variables and lists needed
@@ -35,7 +35,7 @@ for t in time:
     if changet != 0:
         distance = np.sqrt(((x[count + 1] - x[count]) ** 2) + ((y[count + 1] - y[count]) ** 2))
         v = round((distance / changet), 2)
-        if v < 1000:
+        if v < 400:
             speed.append(v)
         else:
             speed.append(speed[-1])
@@ -84,7 +84,7 @@ lc2.set_linewidth(1)
 line2 = ax1.add_collection(lc2)
 fig.colorbar(line2, ax=ax1)
 ax1.set_xlim(0, time[-1] + 5)
-ax1.set_ylim(0, max(speed) + 200)
+ax1.set_ylim(0, max(speed) + 50)
 
 # Create a set of line segments so that we can color them individually
 points3 = np.array([x, y]).T.reshape(-1, 1, 2)
