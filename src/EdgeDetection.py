@@ -60,7 +60,6 @@ while True:
     for c in cnts:
         if cv2.contourArea(c) > 5000:
             area += cv2.contourArea(c)
-            print(cv2.contourArea(c))
             contour_image = cv2.drawContours(contour_image, [c], 0, (100, 5, 10), 3)
 
     # cv2.imshow('Video feed2', contour_image)
