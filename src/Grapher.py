@@ -4,13 +4,14 @@ from matplotlib.collections import LineCollection
 import matplotlib.gridspec as gridspec
 import pandas as pd
 import mplcursors
+import pandas
 
 # reference code: https://matplotlib.org/stable/gallery/lines_bars_and_markers/multicolored_line.html
 # color map reference: https://matplotlib.org/stable/tutorials/colors/colormaps.html
 # decent cmap types - 'turbo', 'gist_rainbow', 'cool', 'hsv'
 
 # read csv file and create pandas dataframe
-csvfile = 'CSVFiles/AmoebaSlide.csv'
+csvfile = 'CSVFiles/AmoebaLong.csv'
 df = pd.read_csv(csvfile)
 
 # variables and lists needed
@@ -35,7 +36,7 @@ for t in time:
     if changet != 0:
         distance = np.sqrt(((x[count + 1] - x[count]) ** 2) + ((y[count + 1] - y[count]) ** 2))
         v = round((distance / changet), 2)
-        if v < 400:
+        if v < 700:
             speed.append(v)
         else:
             speed.append(speed[-1])
@@ -48,6 +49,29 @@ for t in time:
         break
 
 speed.append(speed[-1])
+
+modtime = []
+modspeed = []
+# calculates modded speed
+count = 0
+for t in time:
+    modtime.append(time[count])
+    changet = time[count + 60] - time[count]
+    # calculate speed based on change in distance/change in time
+    if changet != 0:
+        distance = np.sqrt(((x[count + 60] - x[count]) ** 2) + ((y[count + 60] - y[count]) ** 2))
+        v = round((distance / changet), 2)
+        if v < 600:
+            modspeed.append(v)
+        else:
+            modspeed.append(modspeed[-1])
+    else:
+        modspeed.append(modspeed[-1])
+
+    count = count + 60
+
+    if count + 60 >= len(x):
+        break
 
 # define plots
 fig = plt.figure(figsize=(8, 6), facecolor='lightgrey', constrained_layout=True)
@@ -98,6 +122,9 @@ line3 = ax2.add_collection(lc3)
 fig.colorbar(line3, ax=ax2)
 ax2.set_xlim(df.min()[0] - 200, df.max()[0] + 200)
 ax2.set_ylim(df.min()[1] - 200, df.max()[1] + 200)
+
+df = pandas.DataFrame(data={"time": modtime, "speed": modspeed})
+df.to_csv("./timevspeed.csv", sep=',', index=False)
 
 # show plots
 mplcursors.cursor()
