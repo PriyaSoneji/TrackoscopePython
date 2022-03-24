@@ -11,7 +11,7 @@ import pandas
 # decent cmap types - 'turbo', 'gist_rainbow', 'cool', 'hsv', 'nipy_spectral'
 
 # read csv file and create pandas dataframe
-csvfile = 'CSVFiles/Bursaria3.csv'
+csvfile = 'CSVFiles/Stentor1.csv'
 df = pd.read_csv(csvfile)
 
 # variables and lists needed
@@ -56,21 +56,21 @@ modspeed = []
 count = 0
 for t in time:
     modtime.append(time[count])
-    changet = time[count + 10] - time[count]
+    changet = time[count + 3] - time[count]
     # calculate speed based on change in distance/change in time
     if changet != 0:
-        distance = np.sqrt(((x[count + 10] - x[count]) ** 2) + ((y[count + 10] - y[count]) ** 2))
+        distance = np.sqrt(((x[count + 3] - x[count]) ** 2) + ((y[count + 3] - y[count]) ** 2))
         v = round((distance / changet), 2)
-        if v < 3000:
+        if v < 500:
             modspeed.append(v)
         else:
             modspeed.append(modspeed[-1])
     else:
         modspeed.append(modspeed[-1])
 
-    count = count + 10
+    count = count + 3
 
-    if count + 10 >= len(x):
+    if count + 3 >= len(x):
         break
 
 # define plots
@@ -122,7 +122,7 @@ lc2.set_linewidth(1)
 line2 = ax1.add_collection(lc2)
 fig.colorbar(line2, ax=ax1)
 ax1.set_xlim(0, modtime[-1] + 5)
-ax1.set_ylim(0, max(modspeed) + 50)
+ax1.set_ylim(0, max(modspeed) + 10)
 
 # Create a set of line segments so that we can color them individually
 points3 = np.array([x, y]).T.reshape(-1, 1, 2)

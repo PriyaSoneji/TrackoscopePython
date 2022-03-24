@@ -5,7 +5,7 @@ import imutils
 import pandas
 
 # define source of video and blank arrays
-vs = cv2.VideoCapture("./Video/ZOOMFASTTWO.mp4")
+vs = cv2.VideoCapture("./Video/Stentor_Trim.mp4")
 count = 0
 frame_array = []
 area_array = []
@@ -106,12 +106,12 @@ while True:
 
 vs.release()
 
-area_size_array.append(area_size_array[-1])
-area_x.append(area_x[-1])
-area_y.append(area_y[-1])
+# area_size_array.append(area_size_array[-1])
+# area_x.append(area_x[-1])
+# area_y.append(area_y[-1])
 
 # plot stuff
-# plt.plot(frame_array, area_array, color='g')
+plt.plot(frame_array, area_array, color='g')
 # plt.plot(frame_array, area_size_array, color='b')
 # plt.plot(frame_array, area_x, color='m')
 # plt.plot(frame_array, area_y, color='r')
