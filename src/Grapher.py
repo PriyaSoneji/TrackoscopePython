@@ -11,7 +11,7 @@ import pandas
 # decent cmap types - 'turbo', 'gist_rainbow', 'cool', 'hsv', 'nipy_spectral'
 
 # read csv file and create pandas dataframe
-csvfile = 'CSVFiles/Stentor1.csv'
+csvfile = 'CSVFiles/Amoeba23.csv'
 df = pd.read_csv(csvfile)
 
 # variables and lists needed

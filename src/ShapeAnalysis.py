@@ -5,7 +5,7 @@ import imutils
 import pandas
 
 # define source of video and blank arrays
-vs = cv2.VideoCapture("./Video/Stentor_Trim.mp4")
+vs = cv2.VideoCapture("./Video/ZOOMFASTTWO.mp4")
 count = 0
 frame_array = []
 area_array = []
