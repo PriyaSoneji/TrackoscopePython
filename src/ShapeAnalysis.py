@@ -5,7 +5,7 @@ import imutils
 import pandas
 
 # define source of video and blank arrays
-vs = cv2.VideoCapture("./Video/ZOOMFASTTWO.mp4")
+vs = cv2.VideoCapture("./Video/ZOOMCROP.mp4")
 count = 0
 frame_array = []
 area_array = []
@@ -69,13 +69,7 @@ while True:
         if cv2.contourArea(c) > 5000:
             area += cv2.contourArea(c)
 
-    if area > 500:
-        area_array.append(area)
-    else:
-        area_array.append(area_array[-1])
-
-    # show the image with the drawn contours
-    # cv2.imshow('contour', close)
+    area_array.append(area)
 
     # get largest contour
     try:
@@ -98,17 +92,23 @@ while True:
     area_y.append(h)
     area_size_array.append(h * w)
 
+    # Find outer contour and fill with white
+    cnts = cv2.findContours(ROI, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    cnts = cnts[0] if len(cnts) == 2 else cnts[1]
+    cv2.fillPoly(ROI, cnts, [255, 255, 255])
+
     # show the image with the drawn contours
-    cv2.imshow('ROI', ROI)
+    # cv2.imshow('ROI', ROI)
 
     if cv2.waitKey(1) == 13:
         break
 
 vs.release()
 
-# area_size_array.append(area_size_array[-1])
-# area_x.append(area_x[-1])
-# area_y.append(area_y[-1])
+area_array.append(area_array[-1])
+area_size_array.append(area_size_array[-1])
+area_x.append(area_x[-1])
+area_y.append(area_y[-1])
 
 # plot stuff
 plt.plot(frame_array, area_array, color='g')
