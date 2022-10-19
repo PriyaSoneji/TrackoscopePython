@@ -4,7 +4,7 @@ import pandas as pd
 import time
 
 # read csv file and create pandas dataframe
-csvfile = 'CSVFiles/BrineShrimp2.csv'
+csvfile = 'CSVFiles/BrineShrimp1.csv'
 df = pd.read_csv(csvfile)
 
 # variables and lists needed

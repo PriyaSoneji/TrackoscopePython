@@ -11,7 +11,7 @@ import pandas
 # decent cmap types - 'turbo', 'gist_rainbow', 'cool', 'hsv', 'nipy_spectral'
 
 # read csv file and create pandas dataframe
-csvfile = 'CSVFiles/Actino2.csv'
+csvfile = 'CSVFiles/BrineShrimp1.csv'
 df = pd.read_csv(csvfile)
 
 # variables and lists needed
@@ -51,6 +51,7 @@ for index, row in df.iterrows():
 
 modtime = []
 modspeed = []
+totdistance = 0
 # calculates modded speed
 count = 0
 for t in time:
@@ -59,8 +60,9 @@ for t in time:
     # calculate speed based on change in distance/change in time
     if changet != 0:
         distance = np.sqrt(((x[count + 3] - x[count]) ** 2) + ((y[count + 3] - y[count]) ** 2))
+        totdistance = totdistance + distance
         v = round((distance / changet), 2)
-        if v < 1.5:
+        if v < 500:
             modspeed.append(v)
         else:
             modspeed.append(modspeed[-1])
@@ -71,6 +73,15 @@ for t in time:
 
     if count + 5 >= len(x):
         break
+
+
+def smooth(y, box_pts):
+    box = np.ones(box_pts) / box_pts
+    y_smooth = np.convolve(y, box, mode='same')
+    return y_smooth
+
+
+modspeed = smooth(modspeed, 3)
 
 # define plots
 fig = plt.figure(figsize=(8, 6), facecolor='white', constrained_layout=True)
@@ -138,6 +149,8 @@ ax1.set_ylim(0, max(modspeed) + 0.5)
 
 # df = pandas.DataFrame(data={"time": modtime, "speed": modspeed})
 # df.to_csv("./timevspeed.csv", sep=',', index=False)
+
+print(totdistance)
 
 # show plots
 mplcursors.cursor()
