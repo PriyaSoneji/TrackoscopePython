@@ -73,14 +73,6 @@ fovy = 0
 
 start_sec = 0
 
-# Z-Axis
-zdirection = 'N'
-blurry = bool(False)
-rightDirection = bool(False)
-focus = 0
-originalFocus = 0
-compareFocus = 0
-
 fov_x = [0]
 fov_y = [0]
 screen_x = [0]
@@ -112,30 +104,6 @@ def getMicroSeconds():
     return now.timestamp() * 1000
 
 
-# checks for bluriness
-def variance_of_laplacian(image):
-    # compute the Laplacian of the image and then return the focus
-    # measure, which is simply the variance of the Laplacian
-    return cv2.Laplacian(image, cv2.CV_64F).var()
-
-
-def fft_blur_detection(image, thresh):
-    (h, w) = image.shape
-    (cX, cY) = (int(w / 2.0), int(h / 2.0))
-
-    fft = np.fft.fft2(image)
-    fftShift = np.fft.fftshift(fft)
-
-    fftShift[cY - 60:cY + 60, cX - 60:cX + 60] = 0
-    fftShift = np.fft.ifftshift(fftShift)
-    recon = np.fft.ifft2(fftShift)
-
-    magnitude = 20 * np.log(np.abs(recon))
-    mean = np.mean(magnitude)
-
-    return mean, mean <= thresh
-
-
 def savePlot():
     figure1.savefig('graph.png')
 
@@ -160,10 +128,9 @@ countgraphmax = 10
 
 # add points to the graph and updates plot
 def addpoint():
-    global zval, countgraph, countgraphmax, x_values, y_values, fov_x, fov_y, screen_x, screen_y, start_sec
+    global countgraph, countgraphmax, x_values, y_values, fov_x, fov_y, screen_x, screen_y, start_sec
     x_values = np.add(fov_x, screen_x)
     y_values = np.add(fov_y, screen_y)
-    z_values.append(round(zval, 2))
     timestamps.append(round((float(getSeconds()) - float(start_sec)), 3))
     if countgraph == countgraphmax:
         plotgraph()
@@ -371,6 +338,7 @@ def onClose():
     root.quit()
     sys.exit()
 
+
 # microstepping
 # full = 0 0 0
 # half = 1 0 0
@@ -463,112 +431,9 @@ def makemove():
 
 # figure one data
 figure1 = plt.Figure(figsize=(6, 5), dpi=100)
-if trackinginZ:
-    ax = figure1.add_subplot(111, projection='3d')
-else:
-    ax = figure1.add_subplot(111)
+ax = figure1.add_subplot(111)
 bar1 = FigureCanvasTkAgg(figure1, root)
 bar1.get_tk_widget().grid(row=0, column=1)
-
-blurcap = 24
-ogfocus = 0
-
-
-def focusing():
-    global blurry
-    calculateBlur()
-    if blurry:
-        fixBlurMotor()
-
-
-def threadedZAxis():
-    while not stopEvent.is_set():
-        # Z-Axis Detection
-        focusing()
-        sleep(2)
-
-
-# calculates the blur and returns the blur number
-def calculateBlur():
-    global focus, blurry, blurcap, tracking, x, y, w, h
-    if tracking:
-        image = vs.read()
-        image = image[y:y + h, x:x + w]
-    else:
-        image = vs.read()
-
-    image = vs.read()
-
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-
-    focus = round(variance_of_laplacian(gray), 2)
-    # focus = round(cv2.Laplacian(image, cv2.CV_64F).var(), 2)
-    if focus > blurcap:
-        blurry = bool(False)
-    else:
-        blurry = bool(True)
-
-    # (focus, blurry) = fft_blur_detection(gray, blurcap)
-    # focus = round(focus, 2)
-
-    setFocusLabel()
-    return focus
-
-
-updowncount = 0
-zval = 0
-
-
-# uses a motor to fix the blur
-def fixBlurMotor():
-    global originalFocus, compareFocus, rightDirection, focus, zdirection, blurcap, ogfocus, updowncount, zval
-    rightDirection = bool(True)
-    zdirection = 'b'
-    ogfocus = focus
-    originalFocus = focus
-    updowncount = zval
-    for j in range(20):
-        sleep(0.50)
-        compareFocus = calculateBlur()
-
-        if abs(compareFocus - originalFocus) > 0.5:
-            if compareFocus > originalFocus:
-                rightDirection = bool(True)
-            else:
-                rightDirection = bool(False)
-            originalFocus = focus
-        elif ((blurcap - compareFocus) - (blurcap - ogfocus)) > 1:
-            # print("too far")
-            rightDirection = bool(False)
-
-        if not blurry:
-            print("focused now")
-            zdirection = 'S'
-            sendCommand(zdirection.encode())
-            break
-
-        if not rightDirection:
-            # print("Change")
-            if zdirection == 't':
-                zdirection = 'b'
-            else:
-                zdirection = 't'
-
-        if zdirection == 't':
-            updowncount = updowncount + 12
-        else:
-            updowncount = updowncount - 12
-
-        sendCommand(zdirection.encode())
-
-    zval = updowncount
-    addpoint()
-    print("ended")
-
-
-def setFocusLabel():
-    global focus, infovar
-    infovar.set("Focus: " + str(focus))
 
 
 def yPos():
@@ -585,14 +450,6 @@ def xPos():
 
 def xNeg():
     sendCommand('L'.encode())
-
-
-def zPos():
-    sendCommand('t'.encode())
-
-
-def zNeg():
-    sendCommand('b'.encode())
 
 
 def stopMov():
@@ -623,36 +480,26 @@ def changeSpeedMode():
 
 
 def dataSave():
-    global z_values, y_values, x_values, trackinginZ, timestamps, fov_y, fov_x
-    if trackinginZ:
-        df = pandas.DataFrame(data={"xval": x_values, "yval": y_values, "zval": z_values, "time": timestamps})
-        df.to_csv("./trackingvals.csv", sep=',', index=False)
-    else:
-        df = pandas.DataFrame(
-            data={"xval": x_values, "yval": y_values, "time": timestamps, "platxval": fov_x, "platyval": fov_y,
-                  "orgxval": screen_x, "orgyval": screen_y})
-        df.to_csv("./trackingvals.csv", sep=',', index=False)
+    global y_values, x_values, timestamps, fov_y, fov_x
+
+    df = pandas.DataFrame(
+        data={"xval": x_values, "yval": y_values, "time": timestamps, "platxval": fov_x, "platyval": fov_y,
+              "orgxval": screen_x, "orgyval": screen_y})
+    df.to_csv("./trackingvals.csv", sep=',', index=False)
 
 
 # plots the graph using matplotlib
 def plotgraph():
     # grab a reference to the image panels
-    global panelA, figure1, ax, root, x_values, y_values, z_values, trackinginZ
+    global panelA, figure1, ax, root, x_values, y_values
 
     ax.cla()
 
     # plot
-    if trackinginZ:
-        ax.plot(x_values, y_values, z_values, color='black', linestyle='solid', marker='+',
-                markerfacecolor='blue', markevery=[-1])
-        ax.set_xlabel('X-Movement (μm)')
-        ax.set_ylabel('Y-Movement (μm)')
-        ax.set_zlabel('Z-Movement (μm)')
-    else:
-        ax.plot(x_values, y_values, color='green', linestyle='solid', marker='H',
-                markerfacecolor='blue', markersize=8, markevery=[-1])
-        ax.set_xlabel('X-Movement (μm)')
-        ax.set_ylabel('Y-Movement (μm)')
+    ax.plot(x_values, y_values, color='green', linestyle='solid', marker='H',
+            markerfacecolor='blue', markersize=8, markevery=[-1])
+    ax.set_xlabel('X-Movement (μm)')
+    ax.set_ylabel('Y-Movement (μm)')
 
     # idle draw
     bar1.draw_idle()
@@ -691,35 +538,27 @@ def init_buttons():
     # define the buttons and their commands
     startButton = Button(root, text="Start Tracking", command=startTracking, activebackground='yellow')
     plotButton = Button(root, text="Plot Graph", command=plotgraph, activebackground='yellow')
-    zFocusButton = Button(root, text="Focus", command=focusing, activebackground='yellow')
     speedButton = Button(root, text="Change Speed Mode", command=changeSpeedMode, activebackground='yellow')
     dataButton = Button(root, text="Save Data", command=dataSave, activebackground='yellow')
     hideButton = Button(root, text="Change Overlay", command=changeOveraly, activebackground='yellow')
-    blurButton = Button(root, text="Check Blur", command=calculateBlur, activebackground='yellow')
     infoLabel = Label(root, textvariable=infovar, font=("Times", 16))
     # buttons to control the movement
     yposButton = Button(root, text="Y+", command=yPos, activebackground='yellow')
     ynegButton = Button(root, text="Y-", command=yNeg, activebackground='yellow')
     xposButton = Button(root, text="X+", command=xPos, activebackground='yellow')
     xnegButton = Button(root, text="X-", command=xNeg, activebackground='yellow')
-    zposButton = Button(root, text="Z+", command=zPos, activebackground='yellow')
-    znegButton = Button(root, text="Z-", command=zNeg, activebackground='yellow')
     stopmovButton = Button(root, text="S", command=stopMov, activebackground='yellow')
 
     # place the buttons
     startButton.grid(row=1, column=0, sticky='WENS')
     plotButton.grid(row=1, column=1, sticky='WENS')
-    zFocusButton.grid(row=2, column=0, sticky='WENS')
     speedButton.grid(row=2, column=1, sticky='WENS')
     dataButton.grid(row=3, column=0, sticky='WENS')
     hideButton.grid(row=3, column=1, sticky='WENS')
-    blurButton.grid(row=4, column=1, sticky='WENS')
     yposButton.grid(row=1, column=3, sticky='WENS')
     ynegButton.grid(row=3, column=3, sticky='WENS')
     xposButton.grid(row=2, column=4, sticky='WENS')
     xnegButton.grid(row=2, column=2, sticky='WENS')
-    zposButton.grid(row=4, column=4, sticky='WENS')
-    znegButton.grid(row=4, column=2, sticky='WENS')
     stopmovButton.grid(row=2, column=3, sticky='WENS')
     infoLabel.grid(row=4, column=0, sticky='WENS')
 
@@ -738,7 +577,6 @@ init_buttons()
 
 # start videoloop thread
 thread = threading.Thread(target=videoLoop, args=())
-thread2 = threading.Thread(target=threadedZAxis, args=())
 thread.start()
 
 root.wm_title("Trackoscope")
