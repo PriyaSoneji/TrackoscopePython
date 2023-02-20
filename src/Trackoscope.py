@@ -236,11 +236,14 @@ def sendCommandThread(cmd, serport):
 fps = FPS().start()
 infovar = StringVar()
 
-# FOV Data (um)
+# FOV Data HQ Cam (um)
 # If 5x Objective - w=7330, h=4000
 # If 10x Objective - w=1740, h=975
-fov_width = 1740
-fov_height = 975
+# FOV Data Expensive Cam (um)
+# If 5x Objective - w=2255, h=1690
+# If 10x Objective - w=630, h=480
+fov_width = 2255
+fov_height = 1690
 pixel_distance = 0
 
 
@@ -367,7 +370,7 @@ def onClose():
     root.quit()
     sys.exit()
 
-
+# microstepping
 # full = 0 0 0
 # half = 1 0 0
 # quarter = 0 1 0
@@ -377,7 +380,7 @@ def onClose():
 
 # the micrometers per second at no micostepping
 baseSpeed = 3940
-microstepping = baseSpeed / 16
+microstepping = baseSpeed / 2
 
 # keep track of second change
 start_movex_sec = 0
