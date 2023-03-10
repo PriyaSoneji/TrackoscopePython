@@ -119,7 +119,6 @@ panelA = None
 panelB = None
 frame = None
 thread = None
-thread2 = None
 stopEvent = threading.Event()
 
 countgraph = 0
@@ -166,7 +165,7 @@ def serial_ports():
 availableport = serial_ports()
 if len(availableport) > 0:
     # ser1 = serial.Serial(availableport[0], 2000000)
-    ser1 = serial.Serial("COM3", 2000000)
+    ser1 = serial.Serial("COM11", 2000000)
     sleep(1)
     ser1.flush()
     sleep(2)
@@ -210,8 +209,8 @@ infovar = StringVar()
 # FOV Data Expensive Cam (um)
 # If 5x Objective - w=2255, h=1690
 # If 10x Objective - w=630, h=480
-fov_width = 2255
-fov_height = 1690
+fov_width = 7330
+fov_height = 4000
 pixel_distance = 0
 
 
@@ -225,7 +224,7 @@ def find_org_move():
 
 
 def videoLoop():
-    global vs, fov_height, fov_width, panelB, frame, initBB, x, y, w, h, H, W, centered, fps, currx, curry, trackingsuccess, centerx, centery, showOverlay, oldxdirection, oldydirection, pixel_distance, start_sec
+    global camera, vs, fov_height, fov_width, panelB, frame, initBB, x, y, w, h, H, W, centered, fps, currx, curry, trackingsuccess, centerx, centery, showOverlay, oldxdirection, oldydirection, pixel_distance, start_sec
     try:
         # keep looping over frames until we are instructed to stop
         while not stopEvent.is_set():
@@ -257,9 +256,9 @@ def videoLoop():
                     curry = ((H - centery) - (H / 2)) * pixel_distance
                     find_org_move()
 
-                if centerx > 585 or centerx < 15:
+                if centerx > 485 or centerx < 15:
                     trackingsuccess = bool(False)
-                if centery > 435 or centery < 15:
+                if centery > 335 or centery < 15:
                     trackingsuccess = bool(False)
 
                 if not trackingsuccess:
@@ -295,7 +294,7 @@ def videoLoop():
 
             info = [
                 ("Time", round((float(getSeconds()) - float(start_sec)), 3))
-                # ("FPS", "{:.2f}".format(fps.fps())),
+                # ("FPS", "{:.2f}".format(fps.fps()))
                 # ("X-Move", oldxdirection),
                 # ("Y-Move", oldydirection),
             ]
@@ -370,17 +369,17 @@ def makemove():
 
     # Send X direction
     if ((centerx / W) * 100) > xrangehl:
-        newxdirection = 'R'
-    elif ((centerx / W) * 100) < xrangell:
         newxdirection = 'L'
+    elif ((centerx / W) * 100) < xrangell:
+        newxdirection = 'R'
     else:
         newxdirection = 'X'
         end_movex_sec = getSeconds() - start_sec
         deltax_sec = end_movex_sec - start_movex_sec
-        if oldxdirection == 'R':
-            fovx = fovx + (microstepping * deltax_sec)
         if oldxdirection == 'L':
             fovx = fovx - (microstepping * deltax_sec)
+        if oldxdirection == 'R':
+            fovx = fovx + (microstepping * deltax_sec)
 
     if oldxdirection != newxdirection:
         sendCommand(newxdirection.encode())
@@ -389,16 +388,16 @@ def makemove():
 
     # Send Y direction
     if ((centery / H) * 100) > yrangehl:
-        newydirection = 'U'
-    elif ((centery / H) * 100) < yrangell:
         newydirection = 'D'
+    elif ((centery / H) * 100) < yrangell:
+        newydirection = 'U'
     else:
         newydirection = 'Y'
         end_movey_sec = getSeconds() - start_sec
         deltay_sec = end_movey_sec - start_movey_sec
-        if oldydirection == 'U':
-            fovy = fovy - (microstepping * deltay_sec)
         if oldydirection == 'D':
+            fovy = fovy - (microstepping * deltay_sec)
+        if oldydirection == 'U':
             fovy = fovy + (microstepping * deltay_sec)
 
     if oldydirection != newydirection:
@@ -437,19 +436,19 @@ bar1.get_tk_widget().grid(row=0, column=1)
 
 
 def yPos():
-    sendCommand('D'.encode())
-
-
-def yNeg():
     sendCommand('U'.encode())
 
 
+def yNeg():
+    sendCommand('D'.encode())
+
+
 def xPos():
-    sendCommand('R'.encode())
+    sendCommand('L'.encode())
 
 
 def xNeg():
-    sendCommand('L'.encode())
+    sendCommand('R'.encode())
 
 
 def stopMov():
@@ -516,7 +515,7 @@ def testDevice(source):
 
 # starts tracking and prompts user to select the object that they wish to track
 def startTracking():
-    global frame, initBB, tracker, tracking, thread2, ser1, infovar
+    global frame, initBB, tracker, tracking, ser1, infovar
     # if the 's' key is selected start tracking
     frame = vs.read()
     frame = imutils.resize(frame, width=700)
@@ -525,9 +524,6 @@ def startTracking():
     # start OpenCV object tracker using the supplied bounding box
     tracker.init(frame, initBB)
     ser1.flush()
-
-    if trackinginZ:
-        thread2.start()
 
     infovar.set("Tracking Started")
 
@@ -567,7 +563,7 @@ print("[INFO] starting video stream...")
 # for x in range(3):
 #     if testDevice(x):
 #         availvid.append(x)
-#
+
 # vs = VideoStream(src=(availvid[-1])).start()
 vs = VideoStream(src=0)
 sleep(1.5)
