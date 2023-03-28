@@ -165,7 +165,7 @@ def serial_ports():
 availableport = serial_ports()
 if len(availableport) > 0:
     # ser1 = serial.Serial(availableport[0], 2000000)
-    ser1 = serial.Serial("COM11", 2000000)
+    ser1 = serial.Serial("COM4", 2000000)
     sleep(1)
     ser1.flush()
     sleep(2)
@@ -388,17 +388,17 @@ def makemove():
 
     # Send Y direction
     if ((centery / H) * 100) > yrangehl:
-        newydirection = 'D'
-    elif ((centery / H) * 100) < yrangell:
         newydirection = 'U'
+    elif ((centery / H) * 100) < yrangell:
+        newydirection = 'D'
     else:
         newydirection = 'Y'
         end_movey_sec = getSeconds() - start_sec
         deltay_sec = end_movey_sec - start_movey_sec
-        if oldydirection == 'D':
-            fovy = fovy - (microstepping * deltay_sec)
         if oldydirection == 'U':
             fovy = fovy + (microstepping * deltay_sec)
+        if oldydirection == 'D':
+            fovy = fovy - (microstepping * deltay_sec)
 
     if oldydirection != newydirection:
         sendCommand(newydirection.encode())
@@ -436,11 +436,11 @@ bar1.get_tk_widget().grid(row=0, column=1)
 
 
 def yPos():
-    sendCommand('U'.encode())
+    sendCommand('D'.encode())
 
 
 def yNeg():
-    sendCommand('D'.encode())
+    sendCommand('U'.encode())
 
 
 def xPos():

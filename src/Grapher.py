@@ -11,7 +11,8 @@ import pandas
 # decent cmap types - 'turbo', 'gist_rainbow', 'cool', 'hsv', 'nipy_spectral'
 
 # read csv file and create pandas dataframe
-csvfile = 'CSVFiles/BrineShrimp1.csv'
+# csvfile = 'CSVFiles/Spiro3.csv'
+csvfile = 'CSVFiles/Spirostomum2.csv'
 df = pd.read_csv(csvfile)
 
 # variables and lists needed
@@ -151,6 +152,7 @@ ax1.set_ylim(0, max(modspeed) + 0.5)
 # df.to_csv("./timevspeed.csv", sep=',', index=False)
 
 print(totdistance)
+print(sum(modspeed)/len(modspeed))
 
 # show plots
 mplcursors.cursor()
