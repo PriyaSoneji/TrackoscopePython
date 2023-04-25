@@ -241,6 +241,7 @@ def videoLoop():
             # check to see if we are currently tracking an object
             if initBB is not None:
                 # grab the new bounding box coordinates of the object
+                frame = cv2.bitwise_not(frame)
                 (success, box) = tracker.update(frame)
                 (x, y, w, h) = [int(v) for v in box]
 
@@ -262,6 +263,7 @@ def videoLoop():
                     trackingsuccess = bool(False)
 
                 if not trackingsuccess:
+                    frame = cv2.bitwise_not(frame)
                     (success, box) = tracker.update(frame)
                     (x, y, w, h) = [int(v) for v in box]
                     sendCommand('S'.encode())
@@ -519,11 +521,14 @@ def startTracking():
     # if the 's' key is selected start tracking
     frame = vs.read()
     frame = imutils.resize(frame, width=700)
+    frame = cv2.bitwise_not(frame)
     initBB = cv2.selectROI('Selection', frame, showCrosshair=True)
+    print(initBB)
     cv2.destroyWindow('Selection')
     # start OpenCV object tracker using the supplied bounding box
     tracker.init(frame, initBB)
     ser1.flush()
+    # cv2.rectangle(frame, (initBB[1], initBB[2]), (initBB[1] + initBB[3], initBB[1] + initBB[4]),(0, 255, 0), 2)
 
     infovar.set("Tracking Started")
 
