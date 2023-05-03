@@ -241,8 +241,8 @@ def videoLoop():
             # check to see if we are currently tracking an object
             if initBB is not None:
                 # grab the new bounding box coordinates of the object
-                frame = cv2.bitwise_not(frame)
-                (success, box) = tracker.update(frame)
+                framei = cv2.bitwise_not(frame)
+                (success, box) = tracker.update(framei)
                 (x, y, w, h) = [int(v) for v in box]
 
                 trackingsuccess = success
@@ -263,8 +263,8 @@ def videoLoop():
                     trackingsuccess = bool(False)
 
                 if not trackingsuccess:
-                    frame = cv2.bitwise_not(frame)
-                    (success, box) = tracker.update(frame)
+                    framei = cv2.bitwise_not(frame)
+                    (success, box) = tracker.update(framei)
                     (x, y, w, h) = [int(v) for v in box]
                     sendCommand('S'.encode())
                     oldxdirection = 'X'
@@ -379,9 +379,9 @@ def makemove():
         end_movex_sec = getSeconds() - start_sec
         deltax_sec = end_movex_sec - start_movex_sec
         if oldxdirection == 'L':
-            fovx = fovx - (microstepping * deltax_sec)
-        if oldxdirection == 'R':
             fovx = fovx + (microstepping * deltax_sec)
+        if oldxdirection == 'R':
+            fovx = fovx - (microstepping * deltax_sec)
 
     if oldxdirection != newxdirection:
         sendCommand(newxdirection.encode())
@@ -390,17 +390,17 @@ def makemove():
 
     # Send Y direction
     if ((centery / H) * 100) > yrangehl:
-        newydirection = 'U'
-    elif ((centery / H) * 100) < yrangell:
         newydirection = 'D'
+    elif ((centery / H) * 100) < yrangell:
+        newydirection = 'U'
     else:
         newydirection = 'Y'
         end_movey_sec = getSeconds() - start_sec
         deltay_sec = end_movey_sec - start_movey_sec
-        if oldydirection == 'U':
-            fovy = fovy + (microstepping * deltay_sec)
         if oldydirection == 'D':
             fovy = fovy - (microstepping * deltay_sec)
+        if oldydirection == 'U':
+            fovy = fovy + (microstepping * deltay_sec)
 
     if oldydirection != newydirection:
         sendCommand(newydirection.encode())
@@ -438,11 +438,11 @@ bar1.get_tk_widget().grid(row=0, column=1)
 
 
 def yPos():
-    sendCommand('D'.encode())
+    sendCommand('U'.encode())
 
 
 def yNeg():
-    sendCommand('U'.encode())
+    sendCommand('D'.encode())
 
 
 def xPos():
@@ -523,13 +523,10 @@ def startTracking():
     frame = imutils.resize(frame, width=700)
     frame = cv2.bitwise_not(frame)
     initBB = cv2.selectROI('Selection', frame, showCrosshair=True)
-    print(initBB)
     cv2.destroyWindow('Selection')
     # start OpenCV object tracker using the supplied bounding box
     tracker.init(frame, initBB)
     ser1.flush()
-    # cv2.rectangle(frame, (initBB[1], initBB[2]), (initBB[1] + initBB[3], initBB[1] + initBB[4]),(0, 255, 0), 2)
-
     infovar.set("Tracking Started")
 
     tracking = True
