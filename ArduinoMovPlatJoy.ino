@@ -23,6 +23,7 @@ int yValue = 0; // To store value of the Y axis
 int bValue = 0; // To store value of the button
 
 boolean joymove = false;
+boolean testing = true;
 
 void step(boolean dir, byte dirPin, byte stepperPin, int steps)
 {
@@ -51,40 +52,136 @@ void setup() {
 
 void loop() {
   bValue = button.getState();
-  
   if (button.isPressed()) {
     joymove = !joymove;
+    Serial.print("button pressed");
   }
 
-  if(joymove) {
+  if(testing) {
     xValue = analogRead(VRX_PIN);
     yValue = analogRead(VRY_PIN);
 
     if (yValue > 750) {
       digitalWrite(EN, LOW);
       diry = 1;
+      Serial.print("going up");
     } else if (yValue < 250) {
       digitalWrite(EN, LOW);
       diry = -1;
+      Serial.print("going down");
     } else {
       diry = 0;
       digitalWrite(EN, HIGH);
+      Serial.print("stopping y");
     }
 
     if (xValue > 750) {
       digitalWrite(EN, LOW);
       dirx = 1;
+      Serial.print("going right");
     } else if (xValue < 250) {
       digitalWrite(EN, LOW);
       dirx = -1;
+      Serial.print("going left");
     } else {
       dirx = 0;
       digitalWrite(EN, HIGH);
+      Serial.print("stopping x");
     }
     
   }
+  
+  if (Serial.available() && !joymove) {
+    chardir = (Serial.readString()).charAt(0);
+    // Code for Camera Mode
+    if (chardir == 'L') {
+      digitalWrite(EN, LOW);
+      dirx = -1;
+      chardir = 'N';
+    }
+    else if (chardir == 'R') {
+      digitalWrite(EN, LOW);
+      dirx = 1;
+      chardir = 'N';
+    }
+    else if (chardir == 'U') {
+      digitalWrite(EN, LOW);
+      diry = -1;
+      chardir = 'N';
+    }
+    else if (chardir == 'D') {
+      digitalWrite(EN, LOW);
+      diry = 1;
+      chardir = 'N';
+    }
+    else if (chardir == 'X') {
+      digitalWrite(EN, LOW);
+      dirx = 0;
+      chardir = 'N';
+    }
+    else if (chardir == 'Y') {
+      digitalWrite(EN, LOW);
+      diry = 0;
+      chardir = 'N';
+    }
+
+    
+    // Code for microscope mode
+    if (chardir == 'l') {
+      digitalWrite(EN, LOW);
+      dirx = -2;
+      chardir = 'N';
+    }
+    else if (chardir == 'r') {
+      digitalWrite(EN, LOW);
+      dirx = 2;
+      chardir = 'N';
+    }
+    else if (chardir == 'u') {
+      digitalWrite(EN, LOW);
+      diry = -2;
+      chardir = 'N';
+    }
+    else if (chardir == 'd') {
+      digitalWrite(EN, LOW);
+      diry = 2;
+      chardir = 'N';
+    }
+    else if (chardir == 'x') {
+      digitalWrite(EN, LOW);
+      dirx = 0;
+      chardir = 'N';
+    }
+    else if (chardir == 'y') {
+      digitalWrite(EN, LOW);
+      diry = 0;
+      chardir = 'N';
+    }
+    else if (chardir == 'y') {
+      digitalWrite(EN, LOW);
+      diry = 0;
+      chardir = 'N';
+    }
+
+    // Stop all if nothing
+    if ((((dirx == 0) && (diry == 0)) || (chardir == 'S')|| (chardir == 's'))) {
+      digitalWrite(EN, LOW);
+      dirx = 0;
+      diry = 0;
+      chardir = 'N';
+    }
+    
+    // Stop hard stop
+    if (chardir == 'E') {
+      digitalWrite(EN, HIGH);
+      dirx = 0;
+      diry = 0;
+      chardir = 'N';
+    }
+  }
 
   // Moving the platform
+  // big steps
   if (dirx == -1) {
     step(false, X_DIR, X_STP, stepsl);
   }
@@ -96,5 +193,28 @@ void loop() {
   }
   if (diry == 1) {
     step(true, Y_DIR, Y_STP, stepsl);
+  }
+
+
+  // small steps
+  if (dirx == -2) {
+    step(false, X_DIR, X_STP, stepss);
+    dirx = 0;
+    digitalWrite(EN, HIGH);
+  }
+  if (dirx == 2) {
+    step(true, X_DIR, X_STP, stepss);
+    dirx = 0;
+    digitalWrite(EN, HIGH);
+  }
+  if (diry == -2) {
+    step(false, Y_DIR, Y_STP, stepss);
+    diry = 0;
+    digitalWrite(EN, HIGH);
+  }
+  if (diry == 2) {
+    step(true, Y_DIR, Y_STP, stepss);
+    diry = 0;
+    digitalWrite(EN, HIGH);
   }
 }
