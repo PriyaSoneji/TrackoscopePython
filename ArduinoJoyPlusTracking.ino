@@ -1,16 +1,12 @@
-#include <ezButton.h>
-
 #define EN        8      //Stepper Motor Enable, Active Low Level 
 #define X_DIR    5      //X-Axis Stepper Motor Direction Control 
 #define Y_DIR    6     //Y-Axis Stepper Motor Direction Control 
 #define X_STP    2    //X-Axis Stepper Control 
 #define Y_STP   3    //Y-Axis Stepper Control
 
-#define VRX_PIN  A0 // Arduino pin connected to VRX pin
-#define VRY_PIN  A1 // Arduino pin connected to VRY pin
+#define VRX_PIN  A1 // Arduino pin connected to VRX pin
+#define VRY_PIN  A0 // Arduino pin connected to VRY pin
 #define SW_PIN   13  // Arduino pin connected to SW  pin
-
-ezButton button(SW_PIN);
 
 int dirx =0;
 int stepss = 50;
@@ -22,8 +18,8 @@ int xValue = 0; // To store value of the X axis
 int yValue = 0; // To store value of the Y axis
 int bValue = 0; // To store value of the button
 
-boolean joymove = false;
-boolean testing = true;
+uint8_t btn_prev;
+boolean joymove = true;
 
 void step(boolean dir, byte dirPin, byte stepperPin, int steps)
 {
@@ -43,19 +39,21 @@ void setup() {
   pinMode(X_STP, OUTPUT);
   pinMode(Y_DIR, OUTPUT); 
   pinMode(Y_STP, OUTPUT);
+  pinMode(SW_PIN, INPUT_PULLUP);
+  btn_prev = digitalRead(SW_PIN);
   pinMode(EN, OUTPUT);
   digitalWrite(EN, HIGH);
-  Serial.begin(115200);
-  button.setDebounceTime(100); 
-
+  Serial.begin(2000000);
 }
 
 void loop() {
-  bValue = button.getState();
-  if (button.isPressed()) {
+  uint8_t btn = digitalRead(SW_PIN);
+  if (btn == LOW && btn_prev == HIGH){
     joymove = !joymove;
     Serial.print("button pressed");
+    delayMicroseconds(1500);
   }
+  btn_prev = digitalRead(SW_PIN);
 
   if(joymove) {
     xValue = analogRead(VRX_PIN);
@@ -71,8 +69,6 @@ void loop() {
       Serial.print("going down");
     } else {
       diry = 0;
-      digitalWrite(EN, HIGH);
-      Serial.print("stopping y");
     }
 
     if (xValue > 750) {
@@ -85,14 +81,17 @@ void loop() {
       Serial.print("going left");
     } else {
       dirx = 0;
+    }
+
+    if (dirx == 0 and diry == 0) {
       digitalWrite(EN, HIGH);
-      Serial.print("stopping x");
     }
     
   }
   
-  if (Serial.available() && !joymove) {
-    chardir = (Serial.readString()).charAt(0);
+  if (Serial.available() and !joymove) {
+//    chardir = (Serial.readString()).charAt(0);
+    chardir = Serial.read();
     // Code for Camera Mode
     if (chardir == 'L') {
       digitalWrite(EN, LOW);
@@ -125,44 +124,6 @@ void loop() {
       chardir = 'N';
     }
 
-    
-    // Code for microscope mode
-    if (chardir == 'l') {
-      digitalWrite(EN, LOW);
-      dirx = -2;
-      chardir = 'N';
-    }
-    else if (chardir == 'r') {
-      digitalWrite(EN, LOW);
-      dirx = 2;
-      chardir = 'N';
-    }
-    else if (chardir == 'u') {
-      digitalWrite(EN, LOW);
-      diry = -2;
-      chardir = 'N';
-    }
-    else if (chardir == 'd') {
-      digitalWrite(EN, LOW);
-      diry = 2;
-      chardir = 'N';
-    }
-    else if (chardir == 'x') {
-      digitalWrite(EN, LOW);
-      dirx = 0;
-      chardir = 'N';
-    }
-    else if (chardir == 'y') {
-      digitalWrite(EN, LOW);
-      diry = 0;
-      chardir = 'N';
-    }
-    else if (chardir == 'y') {
-      digitalWrite(EN, LOW);
-      diry = 0;
-      chardir = 'N';
-    }
-
     // Stop all if nothing
     if ((((dirx == 0) && (diry == 0)) || (chardir == 'S')|| (chardir == 's'))) {
       digitalWrite(EN, LOW);
@@ -181,7 +142,6 @@ void loop() {
   }
 
   // Moving the platform
-  // big steps
   if (dirx == -1) {
     step(false, X_DIR, X_STP, stepsl);
   }
@@ -193,28 +153,5 @@ void loop() {
   }
   if (diry == 1) {
     step(true, Y_DIR, Y_STP, stepsl);
-  }
-
-
-  // small steps
-  if (dirx == -2) {
-    step(false, X_DIR, X_STP, stepss);
-    dirx = 0;
-    digitalWrite(EN, HIGH);
-  }
-  if (dirx == 2) {
-    step(true, X_DIR, X_STP, stepss);
-    dirx = 0;
-    digitalWrite(EN, HIGH);
-  }
-  if (diry == -2) {
-    step(false, Y_DIR, Y_STP, stepss);
-    diry = 0;
-    digitalWrite(EN, HIGH);
-  }
-  if (diry == 2) {
-    step(true, Y_DIR, Y_STP, stepss);
-    diry = 0;
-    digitalWrite(EN, HIGH);
   }
 }
