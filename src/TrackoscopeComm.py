@@ -58,6 +58,10 @@ tracking = bool(False)
 trackingsuccess = bool(False)
 showOverlay = bool(True)
 speedMode = bool(True)
+recordingVid = bool(False)
+
+# video recorder
+out = None
 
 # range limits
 xrangehl = 60
@@ -165,7 +169,7 @@ def serial_ports():
 availableport = serial_ports()
 if len(availableport) > 0:
     # ser1 = serial.Serial(availableport[0], 2000000)
-    ser1 = serial.Serial("COM4", 2000000)
+    ser1 = serial.Serial("COM6", 2000000)
     sleep(1)
     ser1.flush()
     sleep(2)
@@ -224,14 +228,23 @@ def find_org_move():
 
 
 def videoLoop():
-    global camera, vs, fov_height, fov_width, panelB, frame, initBB, x, y, w, h, H, W, centered, fps, currx, curry, trackingsuccess, centerx, centery, showOverlay, oldxdirection, oldydirection, pixel_distance, start_sec
+    global camera, out, recordingVid, vs, fov_height, fov_width, panelB, frame, initBB, x, y, w, h, H, W, centered, fps, currx, curry, trackingsuccess, centerx, centery, showOverlay, oldxdirection, oldydirection, pixel_distance, start_sec
     try:
         # keep looping over frames until we are instructed to stop
         while not stopEvent.is_set():
             # grab the frame from the video stream and resize it to
             # have a maximum width of 300 pixels
-            frame = vs.read()
-            frame = imutils.resize(frame, width=700)
+            framebig = vs.read()
+            frameuse = framebig
+
+            if recordingVid:
+                if initBB is not None:
+                    text = "{}: {}".format("Time", round((float(getSeconds()) - float(start_sec)), 3))
+                    cv2.putText(framebig, text, (10, framebig.shape[0] - 60),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 1)
+                out.write(framebig)
+
+            frame = imutils.resize(frameuse, width=700)
             (H, W) = frame.shape[:2]
 
             # find how much pixel is in distance
@@ -241,8 +254,7 @@ def videoLoop():
             # check to see if we are currently tracking an object
             if initBB is not None:
                 # grab the new bounding box coordinates of the object
-                framei = cv2.bitwise_not(frame)
-                (success, box) = tracker.update(framei)
+                (success, box) = tracker.update(frame)
                 (x, y, w, h) = [int(v) for v in box]
 
                 trackingsuccess = success
@@ -263,8 +275,7 @@ def videoLoop():
                     trackingsuccess = bool(False)
 
                 if not trackingsuccess:
-                    framei = cv2.bitwise_not(frame)
-                    (success, box) = tracker.update(framei)
+                    (success, box) = tracker.update(frame)
                     (x, y, w, h) = [int(v) for v in box]
                     sendCommand('S'.encode())
                     oldxdirection = 'X'
@@ -514,27 +525,34 @@ def testDevice(source):
     else:
         return True
 
-
 # starts tracking and prompts user to select the object that they wish to track
 def startTracking():
-    global frame, initBB, tracker, tracking, ser1, infovar
+    global frame, initBB, tracker, tracking, ser1, infovar, recordingVid, out
     # if the 's' key is selected start tracking
     frame = vs.read()
+    frame_size = (frame.shape[1], frame.shape[0])
     frame = imutils.resize(frame, width=700)
-    frame = cv2.bitwise_not(frame)
     initBB = cv2.selectROI('Selection', frame, showCrosshair=True)
     cv2.destroyWindow('Selection')
     # start OpenCV object tracker using the supplied bounding box
     tracker.init(frame, initBB)
     ser1.flush()
     infovar.set("Tracking Started")
-
+    recordingVid = True
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    out = cv2.VideoWriter('output.mp4', fourcc, 30.0, frame_size)
     tracking = True
 
+
+def stopRecordingNow():
+    global out
+    dataSave()
+    out.release()
 
 def init_buttons():
     # define the buttons and their commands
     startButton = Button(root, text="Start Tracking", command=startTracking, activebackground='yellow')
+    stopRecording = Button(root, text="Stop Recording", command=stopRecordingNow, activebackground='yellow')
     plotButton = Button(root, text="Plot Graph", command=plotgraph, activebackground='yellow')
     speedButton = Button(root, text="Change Speed Mode", command=changeSpeedMode, activebackground='yellow')
     dataButton = Button(root, text="Save Data", command=dataSave, activebackground='yellow')
@@ -550,6 +568,7 @@ def init_buttons():
     # place the buttons
     startButton.grid(row=1, column=0, sticky='WENS')
     plotButton.grid(row=1, column=1, sticky='WENS')
+    stopRecording.grid(row=2, column=0, sticky='WENS')
     speedButton.grid(row=2, column=1, sticky='WENS')
     dataButton.grid(row=3, column=0, sticky='WENS')
     hideButton.grid(row=3, column=1, sticky='WENS')
@@ -567,9 +586,11 @@ print("[INFO] starting video stream...")
 #         availvid.append(x)
 
 # vs = VideoStream(src=(availvid[-1])).start()
-vs = VideoStream(src=0)
+vs = VideoStream(src=1)
 sleep(1.5)
 vs.start()
+
+print("camera opened")
 
 init_buttons()
 

@@ -4,15 +4,13 @@ from matplotlib.collections import LineCollection
 import matplotlib.gridspec as gridspec
 import pandas as pd
 import mplcursors
-import pandas
 
 # reference code: https://matplotlib.org/stable/gallery/lines_bars_and_markers/multicolored_line.html
 # color map reference: https://matplotlib.org/stable/tutorials/colors/colormaps.html
 # decent cmap types - 'turbo', 'gist_rainbow', 'cool', 'hsv', 'nipy_spectral'
 
 # read csv file and create pandas dataframe
-# csvfile = 'CSVFiles/Spiro3.csv'
-csvfile = 'CSVFiles/Spirostomum2.csv'
+csvfile = 'CSVFiles/Amoeba4.csv'
 df = pd.read_csv(csvfile)
 
 # variables and lists needed
@@ -152,7 +150,6 @@ ax1.set_ylim(0, max(modspeed) + 0.5)
 # df.to_csv("./timevspeed.csv", sep=',', index=False)
 
 print(totdistance)
-print(sum(modspeed)/len(modspeed))
 
 # show plots
 mplcursors.cursor()
