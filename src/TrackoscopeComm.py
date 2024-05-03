@@ -240,8 +240,8 @@ def videoLoop():
             if recordingVid:
                 if initBB is not None:
                     text = "{}: {}".format("Time", round((float(getSeconds()) - float(start_sec)), 3))
-                    cv2.putText(framebig, text, (10, framebig.shape[0] - 60),
-                                cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 1)
+                    cv2.putText(framebig, text, (10, framebig.shape[0] - 30),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
                 out.write(framebig)
 
             frame = imutils.resize(frameuse, width=700)
